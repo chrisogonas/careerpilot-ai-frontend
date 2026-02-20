@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, Resume, CreateResumePayload, UpdateResumePayload, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp } from "@/lib/types";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, Resume, CreateResumePayload, UpdateResumePayload, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -548,6 +548,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Analytics Methods
+  const getAnalytics = async (): Promise<UserAnalytics> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await apiClient.getAnalytics();
+      return data;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch analytics";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     setError(null);
@@ -613,6 +629,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateApplication,
     deleteApplication,
     addFollowUp,
+    getAnalytics,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

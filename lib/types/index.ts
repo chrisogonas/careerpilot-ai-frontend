@@ -607,6 +607,82 @@ export interface AddFollowUpResponse {
   message: string;
 }
 
+// Analytics Types
+export interface ApplicationMetrics {
+  total_applications: number;
+  total_by_status: Record<JobApplicationStatus, number>;
+  success_rate: number; // Percentage of applications that led to offers
+  average_days_to_decision: number;
+  most_common_location: string;
+  most_common_job_type: string;
+}
+
+export interface ResumeUsageMetrics {
+  total_resumes: number;
+  resumes_used: number;
+  total_tailors: number;
+  average_tailors_per_resume: number;
+  most_used_resume: {
+    id: string;
+    title: string;
+    tailor_count: number;
+  } | null;
+}
+
+export interface FollowUpMetrics {
+  total_follow_ups: number;
+  follow_ups_by_type: Record<string, number>;
+  pending_follow_ups: number;
+  average_follow_ups_per_application: number;
+}
+
+export interface ApplicationTimeline {
+  date: string; // ISO date
+  applications_created: number;
+  status_changes: number;
+  follow_ups_completed: number;
+}
+
+export interface ApplicationTrendData {
+  timeline: ApplicationTimeline[]; // Last 30 days
+  month_over_month_growth: number; // Percentage
+  weekly_average_applications: number;
+}
+
+export interface JobMarketInsights {
+  top_companies: Array<{
+    company_name: string;
+    application_count: number;
+    success_rate: number;
+  }>;
+  top_locations: Array<{
+    location: string;
+    application_count: number;
+    average_salary: number;
+  }>;
+  job_types_distribution: Record<string, number>;
+  salary_statistics: {
+    min: number;
+    max: number;
+    average: number;
+    median: number;
+  };
+}
+
+export interface UserAnalytics {
+  metrics: ApplicationMetrics;
+  resume_usage: ResumeUsageMetrics;
+  follow_up_stats: FollowUpMetrics;
+  trends: ApplicationTrendData;
+  market_insights: JobMarketInsights;
+  generated_at: string;
+}
+
+export interface AnalyticsResponse {
+  analytics: UserAnalytics;
+  message: string;
+}
+
 // API Error Response
 export interface ApiError {
   error: string;
@@ -654,4 +730,5 @@ export interface AuthContextType {
   updateApplication: (id: string, payload: UpdateApplicationPayload) => Promise<JobApplication>;
   deleteApplication: (id: string) => Promise<void>;
   addFollowUp: (applicationId: string, payload: AddFollowUpPayload) => Promise<FollowUp>;
+  getAnalytics: () => Promise<UserAnalytics>;
 }

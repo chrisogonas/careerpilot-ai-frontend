@@ -67,6 +67,8 @@ import {
   AddFollowUpPayload,
   AddFollowUpResponse,
   FollowUp,
+  UserAnalytics,
+  AnalyticsResponse,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -633,6 +635,17 @@ class ApiClient {
       status: payload.status || "pending",
       created_at: data.created_at,
     };
+  }
+
+  // Analytics Methods
+  async getAnalytics(): Promise<UserAnalytics> {
+    const response = await fetch(`${this.baseURL}/analytics`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    const data = await this.handleResponse<AnalyticsResponse>(response);
+    return data.analytics;
   }
 }
 
