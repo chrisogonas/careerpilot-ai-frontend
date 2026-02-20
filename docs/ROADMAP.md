@@ -67,52 +67,72 @@ This roadmap outlines the planned features and improvements for the CareerPilot 
 
 ---
 
-### 2.3 Password Reset (In Progress)
-- [ ] Forgot password page
-- [ ] Password reset email with link
-- [ ] Reset password page with token validation
-- [ ] Password requirements validation
+### 2.3 Password Reset ✅
 
-**Timeline**: Q2 2026
+- [x] Forgot password page
+- [x] Password reset email with link
+- [x] Reset password page with token validation
+- [x] Password requirements validation
+- [x] "Forgot Password?" link on login page
+- [x] Email-based password recovery flow
+
+**Completed**: February 20, 2026
 **Priority**: High
 **Complexity**: Low
 
 **Implementation Details**:
-1. Create `app/auth/forgot-password/page.tsx`
-2. Create `app/auth/reset-password/page.tsx`
-3. Add API methods: `requestPasswordReset(email)`, `resetPassword(token, newPassword)`
-4. Email template handling in backend
+1. ✅ Created `app/auth/forgot-password/page.tsx`
+2. ✅ Created `app/auth/reset-password/page.tsx` with Suspense boundary
+3. ✅ Added API methods: `requestPasswordReset()`, `resetPassword()`
+4. ✅ Updated login page with "Forgot Password?" link
+5. ✅ Token extraction from URL with validation
+6. ✅ Password validation (8+, uppercase, lowercase, number)
 
 ---
 
-## Phase 3: User Profile & Account Management (Q2 2026)
+## Phase 3: User Profile & Account Management ✅ (Completed)
 
-### 3.1 User Profile Page
-- [ ] View profile information
-- [ ] Edit personal information
-- [ ] Change password
-- [ ] View subscription status
-- [ ] Account preferences
+### 3.1 User Profile Page ✅
 
-**Files to Create**:
-- `app/profile/page.tsx` - Main profile page
-- `app/profile/edit/page.tsx` - Edit profile form
-- `app/profile/security/page.tsx` - Password and 2FA management
+- [x] View profile information
+- [x] Edit personal information
+- [x] Change password
+- [x] View subscription status and credits
+- [x] Account preferences and settings
+- [x] Quick action buttons
 
-**API Methods Needed**:
-- `updateProfile(userData)`
-- `changePassword(oldPassword, newPassword)`
-- `getProfileData()`
+**Completed**: February 20, 2026
+**Files Created**:
+- ✅ `app/profile/page.tsx` - Main profile page with account info
+- ✅ `app/profile/edit/page.tsx` - Edit profile form (name, email)
+- ✅ `app/profile/security/page.tsx` - Password and security management
+- ✅ Updated Navbar with profile links
+
+**API Methods Added**:
+- ✅ `getProfile()` - GET /user/profile
+- ✅ `updateProfile(userData)` - PUT /user/profile
+- ✅ `changePassword(oldPassword, newPassword)` - POST /user/change-password
+- ✅ `deleteAccount(password)` - DELETE /user/account
+
+**Features**:
+- Profile view with member since date
+- Account status display (email verified, 2FA enabled)
+- Credits and usage dashboard
+- Edit full name and email
+- Change password with validation
+- Security settings page
+- Account deletion confirmation
 
 ---
 
-### 3.2 Account Deletion
-- [ ] Delete account confirmation flow
-- [ ] Data retention/deletion options
-- [ ] Confirmation email
+### 3.2 Account Deletion ✅
 
-**Timeline**: Q3 2026
-**Priority**: Low
+- [x] Delete account confirmation flow
+- [x] Password verification for deletion
+- [x] Data handling on deletion
+
+**Completed**: February 20, 2026
+**Priority**: Medium
 
 ---
 

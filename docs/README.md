@@ -82,10 +82,19 @@ careerpilot-ai-frontend/
   - Resend verification option
   - Token-based email confirmation
   - Verification landing page
+- **Password Reset** ✨
+  - Forgot password flow
+  - Email-based password reset
+  - Secure token validation
+  - Password requirements enforcement
+- **User Profile Management** ✨
+  - View profile information
+  - Edit profile (name, email)
+  - Security settings
+  - Change password functionality
+  - Account deletion option
 
 ⏳ **Planned**
-- Password reset functionality
-- User profile management
 - Email OTP (alternative to TOTP)
 - Subscription management
 - Payment integration (Stripe)
@@ -164,4 +173,4 @@ Internal project - CareerPilot AI
 
 ---
 
-**Last Updated**: February 20, 2026
+**Last Updated**: February 20, 2026 (Password Reset & Profile Management)

@@ -297,6 +297,225 @@ const response = await apiClient.resendVerificationEmail();
 
 ---
 
+## Password Reset Endpoints
+
+### POST /auth/request-password-reset
+
+Request a password reset email.
+
+**Request:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Password reset email sent successfully",
+  "email": "user@example.com"
+}
+```
+
+**Frontend Usage:**
+```typescript
+const response = await apiClient.requestPasswordReset({ 
+  email: 'user@example.com' 
+});
+// Password reset email sent to inbox
+// User has 1 hour to reset password
+```
+
+---
+
+### POST /auth/reset-password
+
+Reset the user's password using a token from the reset email.
+
+**Request:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "new_password": "NewSecurePass123!"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Password reset successfully",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com"
+}
+```
+
+**Frontend Usage:**
+```typescript
+const response = await apiClient.resetPassword({ 
+  token, 
+  new_password: newPassword 
+});
+if (response.user_id) {
+  // Password successfully reset
+  // User should log in with new password
+}
+```
+
+---
+
+## User Profile Endpoints
+
+### GET /user/profile
+
+Get the current user's profile information.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com",
+  "full_name": "John Doe",
+  "plan": "free",
+  "credits_remaining": 100,
+  "email_verified": true,
+  "two_fa_enabled": false,
+  "created_at": "2026-02-20T10:30:00Z",
+  "updated_at": "2026-02-20T15:45:00Z"
+}
+```
+
+**Frontend Usage:**
+```typescript
+const profile = await apiClient.getProfile();
+// Returns user's complete profile data
+```
+
+---
+
+### PUT /user/profile
+
+Update user's profile information.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request:**
+```json
+{
+  "full_name": "John Smith",
+  "email": "newemail@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "newemail@example.com",
+  "full_name": "John Smith",
+  "plan": "free",
+  "credits_remaining": 100,
+  "email_verified": false,
+  "two_fa_enabled": false,
+  "created_at": "2026-02-20T10:30:00Z",
+  "updated_at": "2026-02-20T16:00:00Z"
+}
+```
+
+**Frontend Usage:**
+```typescript
+const updatedProfile = await apiClient.updateProfile({ 
+  full_name: 'John Smith',
+  email: 'newemail@example.com'
+});
+// Profile successfully updated
+```
+
+---
+
+### POST /user/change-password
+
+Change the user's password.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request:**
+```json
+{
+  "old_password": "OldSecurePass123!",
+  "new_password": "NewSecurePass456!"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Password changed successfully",
+  "updated": true
+}
+```
+
+**Frontend Usage:**
+```typescript
+const response = await apiClient.changePassword({ 
+  old_password: oldPassword,
+  new_password: newPassword
+});
+if (response.updated) {
+  // Password successfully changed
+}
+```
+
+---
+
+### DELETE /user/account
+
+Delete the user's account permanently.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request:**
+```json
+{
+  "password": "SecurePass123!"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Account deleted successfully",
+  "deleted": true
+}
+```
+
+**Frontend Usage:**
+```typescript
+const response = await apiClient.deleteAccount({ 
+  password: userPassword 
+});
+if (response.deleted) {
+  // Account successfully deleted
+  // User should be logged out
+}
+```
+
+---
+
 ## Feature Endpoints
 
 ### POST /jobs/analyze
