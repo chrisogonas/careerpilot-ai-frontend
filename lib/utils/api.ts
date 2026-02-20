@@ -56,6 +56,17 @@ import {
   SetDefaultResumeResponse,
   DuplicateResumePayload,
   DuplicateResumeResponse,
+  JobApplication,
+  CreateApplicationPayload,
+  CreateApplicationResponse,
+  UpdateApplicationPayload,
+  UpdateApplicationResponse,
+  GetApplicationsResponse,
+  GetApplicationResponse,
+  DeleteApplicationResponse,
+  AddFollowUpPayload,
+  AddFollowUpResponse,
+  FollowUp,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -540,6 +551,88 @@ class ApiClient {
     const data = await this.handleResponse<DuplicateResumeResponse>(response);
     // Fetch the full resume data after duplication
     return this.getResume(data.id);
+  }
+
+  // Job Application Methods
+  async getApplications(): Promise<JobApplication[]> {
+    const response = await fetch(`${this.baseURL}/applications`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    const data = await this.handleResponse<GetApplicationsResponse>(response);
+    return data.applications;
+  }
+
+  async getApplication(id: string): Promise<JobApplication> {
+    const response = await fetch(`${this.baseURL}/applications/${id}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    const data = await this.handleResponse<GetApplicationResponse>(response);
+    return data.application;
+  }
+
+  async createApplication(payload: CreateApplicationPayload): Promise<JobApplication> {
+    const response = await fetch(`${this.baseURL}/applications`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await this.handleResponse<CreateApplicationResponse>(response);
+    // Return minimal application data (backend would return full data)
+    return {
+      id: data.id,
+      user_id: "",
+      job_title: data.job_title,
+      company_name: data.company_name,
+      status: data.status,
+      follow_up_count: 0,
+      created_at: data.created_at,
+      updated_at: data.created_at,
+    };
+  }
+
+  async updateApplication(id: string, payload: UpdateApplicationPayload): Promise<JobApplication> {
+    const response = await fetch(`${this.baseURL}/applications/${id}`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await this.handleResponse<UpdateApplicationResponse>(response);
+    // Fetch the full application data after update
+    return this.getApplication(id);
+  }
+
+  async deleteApplication(id: string): Promise<void> {
+    const response = await fetch(`${this.baseURL}/applications/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+
+    await this.handleResponse<DeleteApplicationResponse>(response);
+  }
+
+  async addFollowUp(applicationId: string, payload: AddFollowUpPayload): Promise<FollowUp> {
+    const response = await fetch(`${this.baseURL}/applications/${applicationId}/follow-ups`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await this.handleResponse<AddFollowUpResponse>(response);
+    // Return minimal follow-up data (backend would return full data)
+    return {
+      id: data.id,
+      application_id: data.application_id,
+      follow_up_type: data.follow_up_type as any,
+      note: payload.note,
+      status: payload.status || "pending",
+      created_at: data.created_at,
+    };
   }
 }
 

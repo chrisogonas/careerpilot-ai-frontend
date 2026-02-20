@@ -52,6 +52,13 @@ export default function Navbar() {
                   📄 My Resumes
                 </Link>
                 <Link
+                  href="/applications"
+                  className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+                  title="Job Applications"
+                >
+                  💼 Applications
+                </Link>
+                <Link
                   href="/subscribe"
                   className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
                   title="Subscription Plans"

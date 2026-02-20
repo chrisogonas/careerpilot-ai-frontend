@@ -480,6 +480,133 @@ export interface DuplicateResumeResponse {
   message: string;
 }
 
+// Job Application Types
+export type JobApplicationStatus = 
+  | "saved"
+  | "applied"
+  | "phone_screen"
+  | "interview"
+  | "final_round"
+  | "offer"
+  | "accepted"
+  | "rejected"
+  | "withdrawn";
+
+export interface JobApplication {
+  id: string;
+  user_id: string;
+  job_title: string;
+  company_name: string;
+  job_url?: string;
+  job_description?: string;
+  status: JobApplicationStatus;
+  resume_id?: string;
+  notes?: string;
+  salary_range?: string;
+  location?: string;
+  job_type?: "full-time" | "part-time" | "contract" | "remote";
+  applied_date?: string;
+  follow_up_date?: string;
+  applied_resume_id?: string; // Which resume was used to apply
+  applied_resume_title?: string; // Name of the resume used
+  tailor_id?: string; // ID if this came from tailor feature
+  tags?: string[]; // Custom tags for organization
+  follow_up_count: number;
+  created_at: string;
+  updated_at: string;
+  last_follow_up_at?: string;
+}
+
+export interface FollowUp {
+  id: string;
+  application_id: string;
+  follow_up_type: "email" | "phone" | "linkedin" | "note" | "interview_prep" | "other";
+  note: string;
+  status: "pending" | "completed";
+  scheduled_date?: string;
+  completed_date?: string;
+  created_at: string;
+}
+
+export interface CreateApplicationPayload {
+  job_title: string;
+  company_name: string;
+  job_url?: string;
+  job_description?: string;
+  status?: JobApplicationStatus;
+  resume_id?: string;
+  notes?: string;
+  salary_range?: string;
+  location?: string;
+  job_type?: "full-time" | "part-time" | "contract" | "remote";
+  applied_date?: string;
+  tags?: string[];
+}
+
+export interface UpdateApplicationPayload {
+  job_title?: string;
+  company_name?: string;
+  job_url?: string;
+  job_description?: string;
+  status?: JobApplicationStatus;
+  resume_id?: string;
+  notes?: string;
+  salary_range?: string;
+  location?: string;
+  job_type?: "full-time" | "part-time" | "contract" | "remote";
+  follow_up_date?: string;
+  tags?: string[];
+}
+
+export interface AddFollowUpPayload {
+  follow_up_type: "email" | "phone" | "linkedin" | "note" | "interview_prep" | "other";
+  note: string;
+  status?: "pending" | "completed";
+  scheduled_date?: string;
+}
+
+export interface CreateApplicationResponse {
+  id: string;
+  job_title: string;
+  company_name: string;
+  status: JobApplicationStatus;
+  created_at: string;
+  message: string;
+}
+
+export interface UpdateApplicationResponse {
+  id: string;
+  job_title: string;
+  status: JobApplicationStatus;
+  updated_at: string;
+  message: string;
+}
+
+export interface GetApplicationsResponse {
+  applications: JobApplication[];
+  total_count: number;
+  pending_follow_ups_count: number;
+}
+
+export interface GetApplicationResponse {
+  application: JobApplication;
+  follow_ups: FollowUp[];
+}
+
+export interface DeleteApplicationResponse {
+  id: string;
+  deleted: boolean;
+  message: string;
+}
+
+export interface AddFollowUpResponse {
+  id: string;
+  application_id: string;
+  follow_up_type: string;
+  created_at: string;
+  message: string;
+}
+
 // API Error Response
 export interface ApiError {
   error: string;
@@ -521,4 +648,10 @@ export interface AuthContextType {
   deleteResume: (id: string) => Promise<void>;
   setDefaultResume: (id: string) => Promise<Resume>;
   duplicateResume: (resumeId: string, newTitle: string) => Promise<Resume>;
+  getApplications: () => Promise<JobApplication[]>;
+  getApplication: (id: string) => Promise<JobApplication>;
+  createApplication: (payload: CreateApplicationPayload) => Promise<JobApplication>;
+  updateApplication: (id: string, payload: UpdateApplicationPayload) => Promise<JobApplication>;
+  deleteApplication: (id: string) => Promise<void>;
+  addFollowUp: (applicationId: string, payload: AddFollowUpPayload) => Promise<FollowUp>;
 }

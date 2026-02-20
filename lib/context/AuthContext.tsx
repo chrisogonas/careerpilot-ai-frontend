@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, Resume, CreateResumePayload, UpdateResumePayload } from "@/lib/types";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, Resume, CreateResumePayload, UpdateResumePayload, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,6 +30,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
+  const [applications, setApplications] = useState<JobApplication[]>([]);
 
   // Check if user is logged in on mount
   useEffect(() => {
@@ -447,6 +448,106 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Job Application Methods
+  const getApplications = async (): Promise<JobApplication[]> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await apiClient.getApplications();
+      setApplications(data);
+      return data;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch applications";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getApplication = async (id: string): Promise<JobApplication> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await apiClient.getApplication(id);
+      return data;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch application";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createApplication = async (payload: CreateApplicationPayload): Promise<JobApplication> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const newApplication = await apiClient.createApplication(payload);
+      setApplications([...applications, newApplication]);
+      return newApplication;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create application";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateApplication = async (id: string, payload: UpdateApplicationPayload): Promise<JobApplication> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedApplication = await apiClient.updateApplication(id, payload);
+      setApplications(applications.map(a => a.id === id ? updatedApplication : a));
+      return updatedApplication;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update application";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteApplication = async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await apiClient.deleteApplication(id);
+      setApplications(applications.filter(a => a.id !== id));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete application";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const addFollowUp = async (applicationId: string, payload: AddFollowUpPayload): Promise<FollowUp> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const followUp = await apiClient.addFollowUp(applicationId, payload);
+      // Update the application's follow_up_count
+      setApplications(applications.map(a => 
+        a.id === applicationId 
+          ? { ...a, follow_up_count: a.follow_up_count + 1, last_follow_up_at: new Date().toISOString() }
+          : a
+      ));
+      return followUp;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to add follow-up";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     setError(null);
@@ -506,6 +607,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     deleteResume,
     setDefaultResume,
     duplicateResume,
+    getApplications,
+    getApplication,
+    createApplication,
+    updateApplication,
+    deleteApplication,
+    addFollowUp,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
