@@ -56,6 +56,10 @@ import {
   SetDefaultResumeResponse,
   DuplicateResumePayload,
   DuplicateResumeResponse,
+  ResumeUploadPayload,
+  ResumeUploadResponse,
+  ResumeFileUploadResponse,
+  ParsedResumeData,
   JobApplication,
   CreateApplicationPayload,
   CreateApplicationResponse,
@@ -553,6 +557,34 @@ class ApiClient {
     const data = await this.handleResponse<DuplicateResumeResponse>(response);
     // Fetch the full resume data after duplication
     return this.getResume(data.id);
+  }
+
+  async uploadResume(payload: ResumeUploadPayload): Promise<ResumeUploadResponse> {
+    const response = await fetch(`${this.baseURL}/resumes/upload`, {
+      method: "POST",
+      headers: {
+        ...this.getHeaders(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<ResumeUploadResponse>(response);
+  }
+
+  async uploadResumeFile(file: File): Promise<ResumeFileUploadResponse> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await fetch(`${this.baseURL}/resumes/upload-file`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${this.getToken()}`,
+      },
+      body: formData,
+    });
+
+    return this.handleResponse<ResumeFileUploadResponse>(response);
   }
 
   // Job Application Methods

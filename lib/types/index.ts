@@ -480,6 +480,33 @@ export interface DuplicateResumeResponse {
   message: string;
 }
 
+// Resume Upload Types
+export interface ParsedResumeData {
+  name: string | null;
+  email: string | null;
+  skills: string[];
+  experience_text: string;
+}
+
+export interface ResumeUploadPayload {
+  filename: string;
+  content: string;
+}
+
+export interface ResumeUploadResponse {
+  resume_id: string;
+  filename: string;
+  parsed: ParsedResumeData;
+}
+
+export interface ResumeFileUploadResponse {
+  resume_id: string;
+  filename: string;
+  file_type: string;
+  text_length: number;
+  parsed: ParsedResumeData;
+}
+
 // Job Application Types
 export type JobApplicationStatus = 
   | "saved"
@@ -724,6 +751,8 @@ export interface AuthContextType {
   deleteResume: (id: string) => Promise<void>;
   setDefaultResume: (id: string) => Promise<Resume>;
   duplicateResume: (resumeId: string, newTitle: string) => Promise<Resume>;
+  uploadResume: (payload: ResumeUploadPayload) => Promise<ResumeUploadResponse>;
+  uploadResumeFile: (file: File) => Promise<ResumeFileUploadResponse>;
   getApplications: () => Promise<JobApplication[]>;
   getApplication: (id: string) => Promise<JobApplication>;
   createApplication: (payload: CreateApplicationPayload) => Promise<JobApplication>;

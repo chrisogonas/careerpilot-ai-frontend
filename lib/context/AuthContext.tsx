@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, Resume, CreateResumePayload, UpdateResumePayload, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics } from "@/lib/types";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -448,6 +448,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const uploadResume = async (payload: ResumeUploadPayload): Promise<ResumeUploadResponse> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.uploadResume(payload);
+      return response;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload resume";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const uploadResumeFile = async (file: File): Promise<ResumeFileUploadResponse> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.uploadResumeFile(file);
+      return response;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to upload resume file";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Job Application Methods
   const getApplications = async (): Promise<JobApplication[]> => {
     setIsLoading(true);
@@ -623,6 +653,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     deleteResume,
     setDefaultResume,
     duplicateResume,
+    uploadResume,
+    uploadResumeFile,
     getApplications,
     getApplication,
     createApplication,
