@@ -207,6 +207,96 @@ const response = await apiClient.getMe();
 
 ---
 
+## Email Verification Endpoints
+
+### POST /auth/send-verification-email
+
+Send a verification email to the user.
+
+**Request:**
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Verification email sent successfully",
+  "email": "user@example.com"
+}
+```
+
+**Frontend Usage:**
+```typescript
+const response = await apiClient.sendVerificationEmail({ 
+  email: 'user@example.com' 
+});
+// Verification email sent to inbox
+// User needs to click link within 24-48 hours
+```
+
+---
+
+### POST /auth/verify-email
+
+Verify user's email using the token from the verification email link.
+
+**Request:**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response:**
+```json
+{
+  "verified": true,
+  "message": "Email verified successfully",
+  "user_id": "550e8400-e29b-41d4-a716-446655440000",
+  "email": "user@example.com"
+}
+```
+
+**Frontend Usage:**
+```typescript
+const response = await apiClient.verifyEmail({ token });
+if (response.verified) {
+  // Email verification successful
+  // User can now access protected features
+}
+```
+
+---
+
+### POST /auth/resend-verification-email
+
+Resend the verification email to the user.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "message": "Verification email resent successfully",
+  "email": "user@example.com"
+}
+```
+
+**Frontend Usage:**
+```typescript
+const response = await apiClient.resendVerificationEmail();
+// New verification email sent
+// User has another 24-48 hours to verify
+```
+
+---
+
 ## Feature Endpoints
 
 ### POST /jobs/analyze

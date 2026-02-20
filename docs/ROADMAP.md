@@ -44,27 +44,30 @@ This roadmap outlines the planned features and improvements for the CareerPilot 
   - [x] AuthContext updated with 2FA state
   - [x] API integration for all 2FA endpoints
 
-### Planned Features
+### 2.2 Email Verification ✅
 
-#### 2.2 Email Verification
-- [ ] Email verification on registration
-- [ ] Resend verification email option
-- [ ] Verify email page with token validation
-- [ ] Email-verified badge in profile
+- [x] Email verification on registration
+- [x] Resend verification email option
+- [x] Verify email page with token validation
+- [x] Email verification API methods
+- [x] Registration flow updated to require email verification
+- [x] Email verification pages with Suspense boundaries
+- [x] AuthContext integration with email state
 
-**Timeline**: Q2 2026
+**Completed**: February 20, 2026
 **Priority**: High
 **Complexity**: Low
 
 **Implementation Details**:
-1. Create `app/auth/verify-email/page.tsx`
-2. Add email verification check in AuthContext
-3. Update registration flow
-4. Add API methods: `sendVerificationEmail()`, `verifyEmail(token)`
+1. ✅ Created `app/auth/verify-email/page.tsx` with Suspense boundary
+2. ✅ Created `app/auth/resend-verification/page.tsx`
+3. ✅ Added email verification state to AuthContext
+4. ✅ Added API methods: `sendVerificationEmail()`, `verifyEmail()`, `resendVerificationEmail()`
+5. ✅ Updated registration flow to redirect to email verification
 
 ---
 
-#### 2.3 Password Reset
+### 2.3 Password Reset (In Progress)
 - [ ] Forgot password page
 - [ ] Password reset email with link
 - [ ] Reset password page with token validation

@@ -12,6 +12,7 @@ Welcome to the CareerPilot AI Frontend documentation. This guide covers the arch
 - [Project Roadmap](./ROADMAP.md) - Future features and improvements
 - [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
 - [2FA Implementation](./2FA_IMPLEMENTATION.md) - Two-factor authentication details
+- [Email Verification Implementation](./EMAIL_VERIFICATION_IMPLEMENTATION.md) - Email verification details
 
 ## Project Overview
 
@@ -76,9 +77,13 @@ careerpilot-ai-frontend/
   - 6-digit code verification
   - Backup recovery codes
   - Secure login flow
+- **Email Verification** ✨
+  - Registration email verification
+  - Resend verification option
+  - Token-based email confirmation
+  - Verification landing page
 
 ⏳ **Planned**
-- Email verification on registration
 - Password reset functionality
 - User profile management
 - Email OTP (alternative to TOTP)
@@ -159,4 +164,4 @@ Internal project - CareerPilot AI
 
 ---
 
-**Last Updated**: February 19, 2026
+**Last Updated**: February 20, 2026
