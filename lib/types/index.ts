@@ -86,6 +86,27 @@ export interface ResendVerificationEmailResponse {
   email: string;
 }
 
+// Password Reset Types
+export interface RequestPasswordResetPayload {
+  email: string; // Email to send password reset link to
+}
+
+export interface RequestPasswordResetResponse {
+  message: string;
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string; // Token from password reset email
+  new_password: string; // New password
+}
+
+export interface ResetPasswordResponse {
+  message: string;
+  user_id: string;
+  email: string;
+}
+
 // Subscription Types
 export interface Subscription {
   id: string;
@@ -237,4 +258,6 @@ export interface AuthContextType {
   sendVerificationEmail: (email: string) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
+  requestPasswordReset: (email: string) => Promise<void>;
+  resetPassword: (token: string, newPassword: string) => Promise<void>;
 }

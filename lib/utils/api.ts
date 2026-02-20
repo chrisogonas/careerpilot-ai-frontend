@@ -20,6 +20,10 @@ import {
   VerifyEmailPayload,
   VerifyEmailResponse,
   ResendVerificationEmailResponse,
+  RequestPasswordResetPayload,
+  RequestPasswordResetResponse,
+  ResetPasswordPayload,
+  ResetPasswordResponse,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -195,6 +199,27 @@ class ApiClient {
     });
 
     return this.handleResponse<ResendVerificationEmailResponse>(response);
+  }
+
+  // Password Reset Endpoints
+  async requestPasswordReset(payload: RequestPasswordResetPayload): Promise<RequestPasswordResetResponse> {
+    const response = await fetch(`${this.baseURL}/auth/request-password-reset`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<RequestPasswordResetResponse>(response);
+  }
+
+  async resetPassword(payload: ResetPasswordPayload): Promise<ResetPasswordResponse> {
+    const response = await fetch(`${this.baseURL}/auth/reset-password`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<ResetPasswordResponse>(response);
   }
 
   // Job Analysis Endpoints

@@ -191,6 +191,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const requestPasswordReset = async (email: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await apiClient.requestPasswordReset({ email });
+      // Password reset email sent successfully
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send password reset email";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resetPassword = async (token: string, newPassword: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.resetPassword({
+        token,
+        new_password: newPassword,
+      });
+      // Password successfully reset
+      // User needs to log in again with new password
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Password reset failed";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     setError(null);
@@ -233,6 +267,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     sendVerificationEmail,
     verifyEmail,
     resendVerificationEmail,
+    requestPasswordReset,
+    resetPassword,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
