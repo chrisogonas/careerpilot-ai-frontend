@@ -21,7 +21,8 @@ export default function RegisterPage() {
 
     try {
       await register(email, password, fullName);
-      router.push("/dashboard");
+      // After registration, redirect to resend-verification page for email verification
+      router.push("/auth/resend-verification");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Registration failed. Please try again."

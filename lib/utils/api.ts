@@ -15,6 +15,11 @@ import {
   TwoFAVerifyResponse,
   TwoFALoginPayload,
   TwoFALoginResponse,
+  SendVerificationEmailPayload,
+  SendVerificationEmailResponse,
+  VerifyEmailPayload,
+  VerifyEmailResponse,
+  ResendVerificationEmailResponse,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -160,6 +165,36 @@ class ApiClient {
     });
 
     return this.handleResponse<{ success: boolean }>(response);
+  }
+
+  // Email Verification Endpoints
+  async sendVerificationEmail(payload: SendVerificationEmailPayload): Promise<SendVerificationEmailResponse> {
+    const response = await fetch(`${this.baseURL}/auth/send-verification-email`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<SendVerificationEmailResponse>(response);
+  }
+
+  async verifyEmail(payload: VerifyEmailPayload): Promise<VerifyEmailResponse> {
+    const response = await fetch(`${this.baseURL}/auth/verify-email`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<VerifyEmailResponse>(response);
+  }
+
+  async resendVerificationEmail(): Promise<ResendVerificationEmailResponse> {
+    const response = await fetch(`${this.baseURL}/auth/resend-verification-email`, {
+      method: "POST",
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<ResendVerificationEmailResponse>(response);
   }
 
   // Job Analysis Endpoints

@@ -60,6 +60,32 @@ export interface TwoFALoginResponse {
   token_type: string;
 }
 
+// Email Verification Types
+export interface SendVerificationEmailPayload {
+  email: string; // Email to send verification to
+}
+
+export interface SendVerificationEmailResponse {
+  message: string;
+  email: string;
+}
+
+export interface VerifyEmailPayload {
+  token: string; // Token from email link
+}
+
+export interface VerifyEmailResponse {
+  verified: boolean;
+  message: string;
+  user_id?: string;
+  email?: string;
+}
+
+export interface ResendVerificationEmailResponse {
+  message: string;
+  email: string;
+}
+
 // Subscription Types
 export interface Subscription {
   id: string;
@@ -201,9 +227,14 @@ export interface AuthContextType {
   isLoading: boolean;
   error: string | null;
   requiresTwoFA: boolean;
+  isEmailVerified: boolean;
+  pendingEmailVerification: boolean;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, full_name: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
   verifyTwoFA: (code: string) => Promise<void>;
+  sendVerificationEmail: (email: string) => Promise<void>;
+  verifyEmail: (token: string) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
 }

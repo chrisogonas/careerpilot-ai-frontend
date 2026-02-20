@@ -24,6 +24,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [requiresTwoFA, setRequiresTwoFA] = useState(false);
   const [tempAuthData, setTempAuthData] = useState<AuthResponse | null>(null);
+  const [isEmailVerified, setIsEmailVerified] = useState(true);
+  const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
+  const [tempVerificationEmail, setTempVerificationEmail] = useState<string | null>(null);
 
   // Check if user is logged in on mount
   useEffect(() => {
@@ -82,7 +85,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       const response = await apiClient.register(email, password, full_name);
-      setUser(authResponseToUser(response));
+      // After registration, mark email as not verified and pending verification
+      setIsEmailVerified(false);
+      setPendingEmailVerification(true);
+      setTempVerificationEmail(response.email);
+      // Don't set user yet - wait for email verification
     } catch (err) {
       const message = err instanceof Error ? err.message : "Registration failed";
       setError(message);
@@ -110,6 +117,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setTempAuthData(null);
     } catch (err) {
       const message = err instanceof Error ? err.message : "2FA verification failed";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const sendVerificationEmail = async (email: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await apiClient.sendVerificationEmail({ email });
+      setTempVerificationEmail(email);
+      setPendingEmailVerification(true);
+      setIsEmailVerified(false);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to send verification email";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyEmail = async (token: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.verifyEmail({ token });
+      if (response.verified) {
+        setIsEmailVerified(true);
+        setPendingEmailVerification(false);
+        setTempVerificationEmail(null);
+        // If we have auth data waiting (from registration), log in the user
+        if (response.user_id && response.email) {
+          setUser({
+            id: response.user_id,
+            email: response.email,
+            full_name: "", // Will be fetched from backend if needed
+            is_verified: "verified",
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        }
+      } else {
+        throw new Error("Email verification failed");
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Email verification failed";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendVerificationEmail = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      if (!tempVerificationEmail) {
+        throw new Error("No email address available for verification");
+      }
+      await apiClient.resendVerificationEmail();
+      // Verification email sent successfully
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to resend verification email";
       setError(message);
       throw err;
     } finally {
@@ -149,11 +223,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isLoading,
     error,
     requiresTwoFA,
+    isEmailVerified,
+    pendingEmailVerification,
     login,
     register,
     logout,
     refreshToken,
     verifyTwoFA,
+    sendVerificationEmail,
+    verifyEmail,
+    resendVerificationEmail,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
