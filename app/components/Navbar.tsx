@@ -45,9 +45,16 @@ export default function Navbar() {
                   Tailor Resume
                 </Link>
                 <Link
-                  href="/auth/setup-2fa"
+                  href="/profile"
+                  className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+                  title="Your Profile"
+                >
+                  👤 Profile
+                </Link>
+                <Link
+                  href="/profile/security"
                   className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
-                  title="Two-Factor Authentication"
+                  title="Security Settings"
                 >
                   🔐 Security
                 </Link>

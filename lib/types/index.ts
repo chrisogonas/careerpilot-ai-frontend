@@ -107,6 +107,43 @@ export interface ResetPasswordResponse {
   email: string;
 }
 
+// User Profile Types
+export interface ProfileData {
+  id: string;
+  email: string;
+  full_name: string;
+  plan: "free" | "pro" | "premium";
+  credits_remaining: number;
+  email_verified: boolean;
+  two_fa_enabled: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UpdateProfilePayload {
+  full_name?: string; // Optional: new full name
+  email?: string; // Optional: new email address
+}
+
+export interface ChangePasswordPayload {
+  old_password: string; // Current password for verification
+  new_password: string; // New password
+}
+
+export interface ChangePasswordResponse {
+  message: string;
+  updated: boolean;
+}
+
+export interface DeleteAccountPayload {
+  password: string; // Password for account deletion confirmation
+}
+
+export interface DeleteAccountResponse {
+  message: string;
+  deleted: boolean;
+}
+
 // Subscription Types
 export interface Subscription {
   id: string;

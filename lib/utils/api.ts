@@ -24,6 +24,12 @@ import {
   RequestPasswordResetResponse,
   ResetPasswordPayload,
   ResetPasswordResponse,
+  ProfileData,
+  UpdateProfilePayload,
+  ChangePasswordPayload,
+  ChangePasswordResponse,
+  DeleteAccountPayload,
+  DeleteAccountResponse,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -220,6 +226,46 @@ class ApiClient {
     });
 
     return this.handleResponse<ResetPasswordResponse>(response);
+  }
+
+  // User Profile Endpoints
+  async getProfile(): Promise<ProfileData> {
+    const response = await fetch(`${this.baseURL}/user/profile`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<ProfileData>(response);
+  }
+
+  async updateProfile(payload: UpdateProfilePayload): Promise<ProfileData> {
+    const response = await fetch(`${this.baseURL}/user/profile`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<ProfileData>(response);
+  }
+
+  async changePassword(payload: ChangePasswordPayload): Promise<ChangePasswordResponse> {
+    const response = await fetch(`${this.baseURL}/user/change-password`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<ChangePasswordResponse>(response);
+  }
+
+  async deleteAccount(payload: DeleteAccountPayload): Promise<DeleteAccountResponse> {
+    const response = await fetch(`${this.baseURL}/user/account`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<DeleteAccountResponse>(response);
   }
 
   // Job Analysis Endpoints
