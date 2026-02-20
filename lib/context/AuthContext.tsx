@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, AuthContextType, AuthResponse } from "@/lib/types";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,6 +27,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isEmailVerified, setIsEmailVerified] = useState(true);
   const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
   const [tempVerificationEmail, setTempVerificationEmail] = useState<string | null>(null);
+  const [subscription, setSubscription] = useState<Subscription | null>(null);
+  const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
 
   // Check if user is logged in on mount
   useEffect(() => {
@@ -225,6 +227,116 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const getSubscription = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await apiClient.getSubscription();
+      setSubscription(data.subscription);
+      setCurrentPlan(data.current_plan);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch subscription";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getPlans = async (): Promise<Plan[]> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await apiClient.getPlans();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch plans";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createCheckoutSession = async (
+    priceId: string,
+    successUrl: string,
+    cancelUrl: string
+  ): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.createCheckoutSession({
+        price_id: priceId,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      });
+      return response.url;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create checkout session";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateSubscription = async (
+    newPlan: "free" | "pro" | "premium",
+    billingCycle?: "monthly" | "yearly"
+  ) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.updateSubscription({
+        subscription_id: subscription?.id || "",
+        new_plan: newPlan,
+        billing_cycle: billingCycle,
+      });
+      // Refresh subscription data
+      await getSubscription();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update subscription";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const cancelSubscription = async (atPeriodEnd: boolean = true) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.cancelSubscription({
+        subscription_id: subscription?.id,
+        at_period_end: atPeriodEnd,
+      });
+      // Refresh subscription data
+      await getSubscription();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to cancel subscription";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getBillingHistory = async (): Promise<BillingEvent[]> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.getBillingHistory();
+      return response.events;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch billing history";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     setError(null);
@@ -259,6 +371,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     requiresTwoFA,
     isEmailVerified,
     pendingEmailVerification,
+    subscription,
+    currentPlan,
     login,
     register,
     logout,
@@ -269,6 +383,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     resendVerificationEmail,
     requestPasswordReset,
     resetPassword,
+    getSubscription,
+    getPlans,
+    createCheckoutSession,
+    updateSubscription,
+    cancelSubscription,
+    getBillingHistory,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

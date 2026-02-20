@@ -45,6 +45,20 @@ export default function Navbar() {
                   Tailor Resume
                 </Link>
                 <Link
+                  href="/subscribe"
+                  className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
+                  title="Subscription Plans"
+                >
+                  💳 Upgrade
+                </Link>
+                <Link
+                  href="/billing"
+                  className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
+                  title="Billing & Subscription"
+                >
+                  📊 Billing
+                </Link>
+                <Link
                   href="/profile"
                   className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
                   title="Your Profile"

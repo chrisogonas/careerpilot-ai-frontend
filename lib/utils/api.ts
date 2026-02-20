@@ -30,6 +30,21 @@ import {
   ChangePasswordResponse,
   DeleteAccountPayload,
   DeleteAccountResponse,
+  CreateCheckoutSessionPayload,
+  CreateCheckoutSessionResponse,
+  CreateSubscriptionPayload,
+  CreateSubscriptionResponse,
+  UpdateSubscriptionPayload,
+  UpdateSubscriptionResponse,
+  CancelSubscriptionPayload,
+  CancelSubscriptionResponse,
+  GetSubscriptionResponse,
+  GetPlansResponse,
+  PaymentIntentPayload,
+  PaymentIntentResponse,
+  GetBillingHistoryResponse,
+  Plan,
+  Subscription,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -325,6 +340,95 @@ class ApiClient {
     });
 
     return this.handleResponse<UsageResponse>(response);
+  }
+
+  // Stripe & Subscription Endpoints
+  async getPlans(): Promise<Plan[]> {
+    const response = await fetch(`${this.baseURL}/stripe/plans`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    const data = await this.handleResponse<GetPlansResponse>(response);
+    return data.plans;
+  }
+
+  async getSubscription(): Promise<GetSubscriptionResponse> {
+    const response = await fetch(`${this.baseURL}/stripe/subscription`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<GetSubscriptionResponse>(response);
+  }
+
+  async createCheckoutSession(
+    payload: CreateCheckoutSessionPayload
+  ): Promise<CreateCheckoutSessionResponse> {
+    const response = await fetch(`${this.baseURL}/stripe/checkout-session`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<CreateCheckoutSessionResponse>(response);
+  }
+
+  async createSubscription(
+    payload: CreateSubscriptionPayload
+  ): Promise<CreateSubscriptionResponse> {
+    const response = await fetch(`${this.baseURL}/stripe/create-subscription`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<CreateSubscriptionResponse>(response);
+  }
+
+  async updateSubscription(
+    payload: UpdateSubscriptionPayload
+  ): Promise<UpdateSubscriptionResponse> {
+    const response = await fetch(`${this.baseURL}/stripe/update-subscription`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<UpdateSubscriptionResponse>(response);
+  }
+
+  async cancelSubscription(
+    payload: CancelSubscriptionPayload
+  ): Promise<CancelSubscriptionResponse> {
+    const response = await fetch(`${this.baseURL}/stripe/cancel-subscription`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<CancelSubscriptionResponse>(response);
+  }
+
+  async createPaymentIntent(
+    payload: PaymentIntentPayload
+  ): Promise<PaymentIntentResponse> {
+    const response = await fetch(`${this.baseURL}/stripe/payment-intent`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<PaymentIntentResponse>(response);
+  }
+
+  async getBillingHistory(): Promise<GetBillingHistoryResponse> {
+    const response = await fetch(`${this.baseURL}/stripe/billing-history`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<GetBillingHistoryResponse>(response);
   }
 }
 

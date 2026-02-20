@@ -144,17 +144,6 @@ export interface DeleteAccountResponse {
   deleted: boolean;
 }
 
-// Subscription Types
-export interface Subscription {
-  id: string;
-  user_id: string;
-  plan: "free" | "pro" | "premium";
-  stripe_customer_id: string | null;
-  status: "active" | "canceled" | "past_due";
-  credits_remaining: number;
-  current_period_end: string | null;
-}
-
 // Usage Types
 export interface UsageResponse {
   user_id: string;
@@ -271,6 +260,143 @@ export interface StarStoryResponse {
   star_stories: string[];
 }
 
+// Stripe Subscription & Payment Types
+export interface Plan {
+  id: string;
+  name: "free" | "pro" | "premium";
+  display_name: string;
+  price_monthly: number; // in cents
+  price_yearly: number; // in cents
+  currency: string;
+  description: string;
+  features: string[];
+  max_resumes: number;
+  monthly_credits: number;
+  stripe_price_id_monthly?: string;
+  stripe_price_id_yearly?: string;
+}
+
+export interface Subscription {
+  id: string;
+  user_id: string;
+  plan: "free" | "pro" | "premium";
+  status: "active" | "trialing" | "past_due" | "canceled" | "unpaid";
+  stripe_subscription_id?: string;
+  stripe_customer_id?: string;
+  current_period_start: string;
+  current_period_end: string;
+  canceled_at?: string;
+  ended_at?: string;
+  billing_cycle: "monthly" | "yearly";
+  created_at: string;
+  updated_at: string;
+}
+
+export interface StripeCustomer {
+  id: string;
+  user_id: string;
+  stripe_customer_id: string;
+  email: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateCheckoutSessionPayload {
+  price_id: string; // Stripe Price ID (monthly or yearly)
+  success_url: string;
+  cancel_url: string;
+}
+
+export interface CreateCheckoutSessionResponse {
+  session_id: string;
+  url: string;
+  expires_at: number;
+}
+
+export interface CreateSubscriptionPayload {
+  plan: "pro" | "premium";
+  billing_cycle: "monthly" | "yearly";
+  payment_method_id: string;
+}
+
+export interface CreateSubscriptionResponse {
+  subscription_id: string;
+  plan: string;
+  status: string;
+  current_period_end: string;
+  message: string;
+}
+
+export interface UpdateSubscriptionPayload {
+  subscription_id: string;
+  new_plan: "free" | "pro" | "premium";
+  billing_cycle?: "monthly" | "yearly";
+}
+
+export interface UpdateSubscriptionResponse {
+  subscription_id: string;
+  plan: string;
+  status: string;
+  current_period_end: string;
+  message: string;
+}
+
+export interface CancelSubscriptionPayload {
+  subscription_id?: string;
+  at_period_end?: boolean; // if true, cancels at end of billing period
+}
+
+export interface CancelSubscriptionResponse {
+  subscription_id: string;
+  status: string;
+  canceled_at: string;
+  message: string;
+}
+
+export interface GetSubscriptionResponse {
+  subscription: Subscription | null;
+  current_plan: Plan;
+  next_billing_date: string | null;
+  can_upgrade: boolean;
+  can_downgrade: boolean;
+}
+
+export interface GetPlansResponse {
+  plans: Plan[];
+}
+
+export interface PaymentIntentPayload {
+  amount: number; // in cents
+  description: string;
+  metadata?: Record<string, string>;
+}
+
+export interface PaymentIntentResponse {
+  client_secret: string;
+  payment_intent_id: string;
+  amount: number;
+  currency: string;
+  status: string;
+}
+
+export interface BillingEvent {
+  id: string;
+  user_id: string;
+  type: "charge" | "refund" | "subscription_start" | "subscription_end" | "subscription_upgrade";
+  amount: number;
+  currency: string;
+  description: string;
+  stripe_event_id?: string;
+  created_at: string;
+}
+
+export interface GetBillingHistoryResponse {
+  events: BillingEvent[];
+  total_count: number;
+  has_more: boolean;
+}
+
 // API Error Response
 export interface ApiError {
   error: string;
@@ -287,6 +413,8 @@ export interface AuthContextType {
   requiresTwoFA: boolean;
   isEmailVerified: boolean;
   pendingEmailVerification: boolean;
+  subscription: Subscription | null;
+  currentPlan: Plan | null;
   login: (email: string, password: string) => Promise<void>;
   register: (email: string, password: string, full_name: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -297,4 +425,10 @@ export interface AuthContextType {
   resendVerificationEmail: () => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
+  getSubscription: () => Promise<void>;
+  getPlans: () => Promise<Plan[]>;
+  createCheckoutSession: (priceId: string, successUrl: string, cancelUrl: string) => Promise<string>;
+  updateSubscription: (newPlan: "free" | "pro" | "premium", billingCycle?: "monthly" | "yearly") => Promise<void>;
+  cancelSubscription: (atPeriodEnd?: boolean) => Promise<void>;
+  getBillingHistory: () => Promise<BillingEvent[]>;
 }
