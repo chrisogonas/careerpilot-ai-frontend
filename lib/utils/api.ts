@@ -45,6 +45,17 @@ import {
   GetBillingHistoryResponse,
   Plan,
   Subscription,
+  Resume,
+  CreateResumePayload,
+  CreateResumeResponse,
+  UpdateResumePayload,
+  UpdateResumeResponse,
+  GetResumesResponse,
+  GetResumeResponse,
+  DeleteResumeResponse,
+  SetDefaultResumeResponse,
+  DuplicateResumePayload,
+  DuplicateResumeResponse,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -429,6 +440,106 @@ class ApiClient {
     });
 
     return this.handleResponse<GetBillingHistoryResponse>(response);
+  }
+
+  // Resume Library Endpoints
+  async getResumes(): Promise<Resume[]> {
+    const response = await fetch(`${this.baseURL}/resumes`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    const data = await this.handleResponse<GetResumesResponse>(response);
+    return data.resumes;
+  }
+
+  async getResume(id: string): Promise<Resume> {
+    const response = await fetch(`${this.baseURL}/resumes/${id}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    const data = await this.handleResponse<GetResumeResponse>(response);
+    return data.resume;
+  }
+
+  async createResume(payload: CreateResumePayload): Promise<Resume> {
+    const response = await fetch(`${this.baseURL}/resumes`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await this.handleResponse<CreateResumeResponse>(response);
+    return {
+      id: data.id,
+      user_id: "",
+      title: data.title,
+      file_name: data.file_name,
+      content: payload.content,
+      version: data.version,
+      status: "active",
+      tailor_count: 0,
+      is_default: payload.is_default || false,
+      created_at: data.created_at,
+      updated_at: data.created_at,
+    };
+  }
+
+  async updateResume(id: string, payload: UpdateResumePayload): Promise<Resume> {
+    const response = await fetch(`${this.baseURL}/resumes/${id}`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    const data = await this.handleResponse<UpdateResumeResponse>(response);
+    // Return minimal resume data (backend would return full data)
+    return {
+      id: data.id,
+      user_id: "",
+      title: data.title,
+      file_name: "",
+      content: payload.content || "",
+      version: data.version,
+      status: payload.status || "active",
+      tailor_count: 0,
+      is_default: payload.is_default || false,
+      created_at: "",
+      updated_at: data.updated_at,
+    };
+  }
+
+  async deleteResume(id: string): Promise<void> {
+    const response = await fetch(`${this.baseURL}/resumes/${id}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+
+    await this.handleResponse<DeleteResumeResponse>(response);
+  }
+
+  async setDefaultResume(id: string): Promise<Resume> {
+    const response = await fetch(`${this.baseURL}/resumes/${id}/set-default`, {
+      method: "POST",
+      headers: this.getHeaders(),
+    });
+
+    const dataResponse = await this.handleResponse<SetDefaultResumeResponse>(response);
+    // Fetch the full resume data after setting default
+    return this.getResume(id);
+  }
+
+  async duplicateResume(resumeId: string, newTitle: string): Promise<Resume> {
+    const response = await fetch(`${this.baseURL}/resumes/${resumeId}/duplicate`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ new_title: newTitle }),
+    });
+
+    const data = await this.handleResponse<DuplicateResumeResponse>(response);
+    // Fetch the full resume data after duplication
+    return this.getResume(data.id);
   }
 }
 

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent } from "@/lib/types";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, Resume, CreateResumePayload, UpdateResumePayload } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -29,6 +29,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tempVerificationEmail, setTempVerificationEmail] = useState<string | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
+  const [resumes, setResumes] = useState<Resume[]>([]);
 
   // Check if user is logged in on mount
   useEffect(() => {
@@ -337,6 +338,115 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const getResumes = async (): Promise<Resume[]> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const fetchedResumes = await apiClient.getResumes();
+      setResumes(fetchedResumes);
+      return fetchedResumes;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch resumes";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getResume = async (id: string): Promise<Resume> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      return await apiClient.getResume(id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch resume";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createResume = async (payload: CreateResumePayload): Promise<Resume> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const newResume = await apiClient.createResume(payload);
+      setResumes([...resumes, newResume]);
+      return newResume;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create resume";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const updateResume = async (id: string, payload: UpdateResumePayload): Promise<Resume> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedResume = await apiClient.updateResume(id, payload);
+      setResumes(resumes.map(r => r.id === id ? updatedResume : r));
+      return updatedResume;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update resume";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const deleteResume = async (id: string) => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      await apiClient.deleteResume(id);
+      setResumes(resumes.filter(r => r.id !== id));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete resume";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const setDefaultResume = async (id: string): Promise<Resume> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const updatedResume = await apiClient.setDefaultResume(id);
+      setResumes(resumes.map(r => ({ ...r, is_default: r.id === id })));
+      return updatedResume;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to set default resume";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const duplicateResume = async (resumeId: string, newTitle: string): Promise<Resume> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const duplicatedResume = await apiClient.duplicateResume(resumeId, newTitle);
+      setResumes([...resumes, duplicatedResume]);
+      return duplicatedResume;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to duplicate resume";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     setError(null);
@@ -389,6 +499,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateSubscription,
     cancelSubscription,
     getBillingHistory,
+    getResumes,
+    getResume,
+    createResume,
+    updateResume,
+    deleteResume,
+    setDefaultResume,
+    duplicateResume,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

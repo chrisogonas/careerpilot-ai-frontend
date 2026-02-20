@@ -157,15 +157,6 @@ export interface UsageResponse {
   };
 }
 
-// Resume Types
-export interface Resume {
-  id: string;
-  user_id: string;
-  original_text: string;
-  title: string | null;
-  file_name: string | null;
-  created_at: string;
-}
 
 // Job Description Types
 export interface JobDescription {
@@ -397,6 +388,98 @@ export interface GetBillingHistoryResponse {
   has_more: boolean;
 }
 
+// Resume Library Types
+export interface Resume {
+  id: string;
+  user_id: string;
+  title: string;
+  file_name: string;
+  content: string; // Full resume text content
+  file_url?: string;
+  is_default: boolean;
+  tailor_count: number; // Number of times tailored
+  version: number;
+  status: "draft" | "active" | "archived";
+  created_at: string;
+  updated_at: string;
+  last_used_at?: string;
+}
+
+export interface ResumeVersion {
+  id: string;
+  resume_id: string;
+  version_number: number;
+  content: string;
+  change_summary?: string;
+  created_at: string;
+}
+
+export interface CreateResumePayload {
+  title: string;
+  content: string;
+  file_name?: string;
+  is_default?: boolean;
+}
+
+export interface UpdateResumePayload {
+  title?: string;
+  content?: string;
+  is_default?: boolean;
+  status?: "draft" | "active" | "archived";
+}
+
+export interface CreateResumeResponse {
+  id: string;
+  title: string;
+  file_name: string;
+  version: number;
+  created_at: string;
+  message: string;
+}
+
+export interface UpdateResumeResponse {
+  id: string;
+  title: string;
+  version: number;
+  updated_at: string;
+  message: string;
+}
+
+export interface GetResumesResponse {
+  resumes: Resume[];
+  total_count: number;
+}
+
+export interface GetResumeResponse {
+  resume: Resume;
+  versions: ResumeVersion[];
+}
+
+export interface DeleteResumeResponse {
+  id: string;
+  deleted: boolean;
+  message: string;
+}
+
+export interface SetDefaultResumeResponse {
+  resume_id: string;
+  is_default: boolean;
+  message: string;
+}
+
+export interface DuplicateResumePayload {
+  resume_id: string;
+  new_title: string;
+}
+
+export interface DuplicateResumeResponse {
+  id: string;
+  title: string;
+  original_resume_id: string;
+  created_at: string;
+  message: string;
+}
+
 // API Error Response
 export interface ApiError {
   error: string;
@@ -431,4 +514,11 @@ export interface AuthContextType {
   updateSubscription: (newPlan: "free" | "pro" | "premium", billingCycle?: "monthly" | "yearly") => Promise<void>;
   cancelSubscription: (atPeriodEnd?: boolean) => Promise<void>;
   getBillingHistory: () => Promise<BillingEvent[]>;
+  getResumes: () => Promise<Resume[]>;
+  getResume: (id: string) => Promise<Resume>;
+  createResume: (payload: CreateResumePayload) => Promise<Resume>;
+  updateResume: (id: string, payload: UpdateResumePayload) => Promise<Resume>;
+  deleteResume: (id: string) => Promise<void>;
+  setDefaultResume: (id: string) => Promise<Resume>;
+  duplicateResume: (resumeId: string, newTitle: string) => Promise<Resume>;
 }
