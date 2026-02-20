@@ -801,6 +801,271 @@ When rate limited (429):
 
 ---
 
+## Stripe & Subscription Endpoints
+
+### GET /stripe/plans
+
+Retrieve all available subscription plans.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "plans": [
+    {
+      "id": "plan_free_001",
+      "name": "free",
+      "display_name": "Free Plan",
+      "price_monthly": 0,
+      "price_yearly": 0,
+      "currency": "USD",
+      "description": "Perfect for getting started",
+      "features": [
+        "1 Resume",
+        "50 Monthly Credits",
+        "Email Support"
+      ],
+      "max_resumes": 1,
+      "monthly_credits": 50
+    },
+    {
+      "id": "plan_pro_001",
+      "name": "pro",
+      "display_name": "Pro Plan",
+      "price_monthly": 2900,
+      "price_yearly": 29000,
+      "currency": "USD",
+      "description": "For serious job seekers",
+      "features": [
+        "5 Resumes",
+        "500 Monthly Credits",
+        "Priority Support"
+      ],
+      "max_resumes": 5,
+      "monthly_credits": 500,
+      "stripe_price_id_monthly": "price_1XXXXX",
+      "stripe_price_id_yearly": "price_1YYYYY"
+    }
+  ]
+}
+```
+
+---
+
+### GET /stripe/subscription
+
+Get the current user's subscription details.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Response:**
+```json
+{
+  "subscription": {
+    "id": "sub_XXXXXXXXXXXX",
+    "user_id": "550e8400-e29b-41d4-a716-446655440000",
+    "plan": "pro",
+    "status": "active",
+    "stripe_subscription_id": "sub_stripe_XXXXX",
+    "stripe_customer_id": "cus_XXXXX",
+    "current_period_start": "2026-02-20T00:00:00Z",
+    "current_period_end": "2026-03-20T00:00:00Z",
+    "billing_cycle": "monthly"
+  },
+  "current_plan": { ... },
+  "next_billing_date": "2026-03-20",
+  "can_upgrade": true,
+  "can_downgrade": false
+}
+```
+
+---
+
+### POST /stripe/checkout-session
+
+Create a Stripe checkout session for plan purchase.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request:**
+```json
+{
+  "price_id": "price_1XXXXX",
+  "success_url": "https://example.com/billing?success=true",
+  "cancel_url": "https://example.com/subscribe"
+}
+```
+
+**Response:**
+```json
+{
+  "session_id": "cs_XXXXXXXXXXXXX",
+  "url": "https://checkout.stripe.com/pay/cs_XXXXX",
+  "expires_at": 1708372800
+}
+```
+
+**Frontend Usage:**
+```typescript
+const checkoutUrl = await apiClient.createCheckoutSession({
+  price_id: "price_1XXXXX",
+  success_url: "https://example.com/billing?success=true",
+  cancel_url: "https://example.com/subscribe"
+});
+// Redirect user to Stripe Checkout
+window.location.href = checkoutUrl;
+```
+
+---
+
+### POST /stripe/update-subscription
+
+Update the active subscription to a different plan.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request:**
+```json
+{
+  "subscription_id": "sub_XXXXXXXXXXXX",
+  "new_plan": "premium",
+  "billing_cycle": "yearly"
+}
+```
+
+**Response:**
+```json
+{
+  "subscription_id": "sub_XXXXXXXXXXXX",
+  "plan": "premium",
+  "status": "active",
+  "current_period_end": "2027-02-20T00:00:00Z",
+  "message": "Subscription updated successfully"
+}
+```
+
+---
+
+### POST /stripe/cancel-subscription
+
+Cancel the user's active subscription.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request:**
+```json
+{
+  "subscription_id": "sub_XXXXXXXXXXXX",
+  "at_period_end": true
+}
+```
+
+**Response:**
+```json
+{
+  "subscription_id": "sub_XXXXXXXXXXXX",
+  "status": "canceled",
+  "canceled_at": "2026-02-20T15:30:00Z",
+  "message": "Subscription canceled successfully"
+}
+```
+
+---
+
+### POST /stripe/payment-intent
+
+Create a payment intent for direct payments (not subscriptions).
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Request:**
+```json
+{
+  "amount": 2999,
+  "description": "Credit Top-up",
+  "metadata": {
+    "user_id": "550e8400-e29b-41d4-a716-446655440000"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "client_secret": "pi_XXXXXXXXXXXXX_secret_YYYYYYYYY",
+  "payment_intent_id": "pi_XXXXXXXXXXXXX",
+  "amount": 2999,
+  "currency": "USD",
+  "status": "requires_payment_method"
+}
+```
+
+---
+
+### GET /stripe/billing-history
+
+Get the user's billing history and transactions.
+
+**Headers Required:**
+```
+Authorization: Bearer {access_token}
+```
+
+**Query Parameters:**
+```
+?limit=20&offset=0
+```
+
+**Response:**
+```json
+{
+  "events": [
+    {
+      "id": "evt_XXXXXXXXXXXX",
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "charge",
+      "amount": 2900,
+      "currency": "USD",
+      "description": "Pro Plan Monthly Subscription",
+      "stripe_event_id": "evt_stripe_XXXXX",
+      "created_at": "2026-02-20T10:00:00Z"
+    },
+    {
+      "id": "evt_XXXXXXXXXXXX",
+      "user_id": "550e8400-e29b-41d4-a716-446655440000",
+      "type": "subscription_start",
+      "amount": 0,
+      "currency": "USD",
+      "description": "Pro Plan subscription started",
+      "created_at": "2026-02-20T09:00:00Z"
+    }
+  ],
+  "total_count": 15,
+  "has_more": false
+}
+```
+
+---
+
 ## Request/Response Lifecycle
 
 Every API request follows this flow:
@@ -860,4 +1125,4 @@ curl -X POST http://localhost:8000/api/v1/jobs/analyze \
 
 ---
 
-**Last Updated**: February 19, 2026
+**Last Updated**: February 20, 2026 (Stripe Integration)

@@ -13,6 +13,7 @@ Welcome to the CareerPilot AI Frontend documentation. This guide covers the arch
 - [Troubleshooting Guide](./TROUBLESHOOTING.md) - Common issues and solutions
 - [2FA Implementation](./2FA_IMPLEMENTATION.md) - Two-factor authentication details
 - [Email Verification Implementation](./EMAIL_VERIFICATION_IMPLEMENTATION.md) - Email verification details
+- [Stripe Integration](./STRIPE_INTEGRATION.md) - Payment and subscription documentation
 
 ## Project Overview
 
@@ -93,14 +94,22 @@ careerpilot-ai-frontend/
   - Security settings
   - Change password functionality
   - Account deletion option
+- **Stripe Subscription & Payment Integration** ✨
+  - Plan selection and comparison
+  - Secure checkout with Stripe
+  - Monthly/Yearly billing options
+  - Subscription management
+  - Billing history tracking
+  - Plan upgrade/downgrade
+  - Subscription cancellation
 
 ⏳ **Planned**
+- Resume Library Management
+- Job Application Tracker
+- Advanced Analytics
 - Email OTP (alternative to TOTP)
-- Subscription management
-- Payment integration (Stripe)
-- API key generation
 - Dark mode support
-- Advanced analytics
+- API key generation
 
 ## Getting Started
 
@@ -173,4 +182,4 @@ Internal project - CareerPilot AI
 
 ---
 
-**Last Updated**: February 20, 2026 (Password Reset & Profile Management)
+**Last Updated**: February 20, 2026 (Stripe Subscription & Payment Integration)

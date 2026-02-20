@@ -136,50 +136,102 @@ This roadmap outlines the planned features and improvements for the CareerPilot 
 
 ---
 
-## Phase 4: Subscription & Payment (Q2-Q3 2026)
+## Phase 4: Subscription & Payment ✅ (Completed)
 
-### 4.1 Stripe Integration
-- [ ] Implement Stripe.js library
-- [ ] Payment element/card input form
-- [ ] Subscription selection page
-- [ ] Payment intent creation
-- [ ] Error handling for declined cards
+### 4.1 Stripe Integration ✅
 
-**Files to Create**:
-- `app/subscribe/page.tsx` - Subscription selection
-- `app/checkout/page.tsx` - Payment form
-- Create Stripe hooks/utilities
+- [x] Implement Stripe.js library
+- [x] Stripe/React-Stripe-JS library integration
+- [x] Stripe type definitions and API client methods
+- [x] Plan selection page with monthly/yearly options
+- [x] Stripe checkout session creation
+- [x] Payment processing integration
 
-**Dependencies**:
-- Install `@stripe/react-stripe-js`
-- Install `@stripe/stripe-js`
+**Completed**: February 20, 2026
+**Files Created**:
+- ✅ `app/subscribe/page.tsx` - Plan selection and upgrade
+- ✅ `app/billing/page.tsx` - Subscription dashboard and billing history
+- ✅ Updated type system with Stripe types (lib/types/index.ts)
+- ✅ Added Stripe API methods (lib/utils/api.ts)
+- ✅ Updated AuthContext with subscription state
+- ✅ Updated Navbar with billing links
 
-**API Methods Needed**:
-- `createPaymentIntent(planId)`
-- `confirmSubscription(paymentMethodId)`
-- `updateSubscription(newPlanId)`
-- `cancelSubscription()`
+**Dependencies Installed**:
+- ✅ `@stripe/react-stripe-js`
+- ✅ `@stripe/stripe-js`
+
+**Features Implemented**:
+- Plan display with Free, Pro, Premium tiers
+- Billing cycle toggle (monthly/yearly with 20% savings)
+- Feature comparison
+- Stripe checkout integration
+- Success/cancel handling
+- Professional UI with dark mode
+- FAQ section
+- Payment redirection flow
+
+**API Methods Added**:
+- ✅ `getPlans()` - GET /stripe/plans
+- ✅ `getSubscription()` - GET /stripe/subscription
+- ✅ `createCheckoutSession(priceId, successUrl, cancelUrl)` - POST /stripe/checkout-session
+- ✅ `createSubscription(payload)` - POST /stripe/create-subscription
+- ✅ `updateSubscription(payload)` - POST /stripe/update-subscription
+- ✅ `cancelSubscription(payload)` - POST /stripe/cancel-subscription
+- ✅ `createPaymentIntent(payload)` - POST /stripe/payment-intent
+- ✅ `getBillingHistory()` - GET /stripe/billing-history
 
 ---
 
-### 4.2 Subscription Management
-- [ ] View current subscription
-- [ ] Upgrade/downgrade plans
-- [ ] Cancel subscription
-- [ ] Billing history
-- [ ] Invoice downloads
+### 4.2 Subscription Management ✅
 
-**Files to Create**:
-- `app/subscription/page.tsx` - Subscription dashboard
-- `app/billing/page.tsx` - Billing history
+- [x] View current subscription status
+- [x] Upgrade/downgrade plans
+- [x] Cancel subscription with confirmation
+- [x] Billing history with transaction details
+- [x] Plan change functionality
+
+**Completed**: February 20, 2026
+**Priority**: High
+
+**Files Created**:
+- ✅ `app/billing/page.tsx` - Comprehensive billing dashboard
+  - Current plan display with status
+  - Upgrade/change plan buttons
+  - Cancellation confirmation modal
+  - Billing history table
+  - Payment method management link
+  - Plan details card
+
+**Features**:
+- Subscription status display (active, canceled, etc.)
+- Billing cycle information
+- Current/next billing dates
+- Transaction history with dates and amounts
+- Plan comparison
+- Change plan functionality
+- Safe cancellation (end of period support)
+- Link to Stripe customer portal
 
 ---
 
-### 4.3 Credits & Usage
-- [ ] Real-time credit deduction
-- [ ] Usage analytics
-- [ ] Credit purchase/top-up
-- [ ] Credit expiration tracking
+### 4.3 Stripe Configuration
+
+**Environment Variables** (to be set):
+```env
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_test_XXXXXXXXXXXX
+```
+
+**Backend Stripe Setup**:
+- Stripe Secret Key (backend only, not exposed to frontend)
+- Webhook endpoints for subscription events
+- Product/Price configuration in Stripe
+
+**Documentation**:
+- ✅ `docs/STRIPE_INTEGRATION.md` - Comprehensive Stripe integration guide
+- ✅ Setup instructions
+- ✅ Testing with Stripe test cards
+- ✅ Troubleshooting guide
+- ✅ Production migration steps
 
 ---
 
