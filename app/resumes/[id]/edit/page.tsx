@@ -40,9 +40,10 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
     };
 
     fetchResume();
-  }, [user, router, resumeId, getResume]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router, resumeId]);
 
-  // Auto-save functionality
+  // Auto-save: only triggers 5 minutes after the last edit
   useEffect(() => {
     if (!autoSaveEnabled || !resume) return;
 
@@ -55,10 +56,11 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
       } catch (err) {
         console.error("Auto-save failed:", err);
       }
-    }, 3000); // Auto-save after 3 seconds of inactivity
+    }, 5 * 60 * 1000); // 5 minutes of inactivity
 
     return () => clearTimeout(timer);
-  }, [title, content, autoSaveEnabled, resume, resumeId, updateResume]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, content, autoSaveEnabled, resume, resumeId]);
 
   const handleSave = async () => {
     if (!title.trim() || !content.trim()) {
@@ -68,8 +70,7 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
 
     try {
       setIsSaving(true);
-      const updatedResume = await updateResume(resumeId, { title, content });
-      setResume(updatedResume);
+      await updateResume(resumeId, { title, content });
       setLastSavedTime(new Date());
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);

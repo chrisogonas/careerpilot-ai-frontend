@@ -33,7 +33,8 @@ export default function ResumesPage() {
     };
 
     fetchResumes();
-  }, [user, router, getResumes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, router]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this resume?")) return;
