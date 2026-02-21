@@ -3,7 +3,7 @@
 **Test Date**: February 20, 2026  
 **Environment**: Production Build (Next.js 16.1.6)  
 **Build Version**: Latest (29 routes, 0 TypeScript errors)  
-**Scope**: All 8 implementation phases + Dark Mode Support
+**Scope**: All 9 implementation phases (including AI Augmentation Features) + Dark Mode Support + Responsive Design + Browser Compatibility
 
 ---
 
@@ -347,7 +347,179 @@
 
 ---
 
-## 7. Phase 6: Job Application Tracker Tests
+## 6.6 AI Augmentation Features Tests
+
+### 6.6.1 Tailor Resume Feature
+**Route**: `/tailor`
+- [ ] Tailor resume page loads without errors
+- [ ] "Job Description" textarea visible and functional
+- [ ] "Target Role" field visible and editable
+- [ ] "Tone" dropdown visible with options
+- [ ] Dark mode styling applied correctly
+- [ ] Page responsive on mobile/tablet/desktop
+
+#### Resume Input Method: Select Saved Resume
+- [ ] "📚 Select Saved" tab button visible
+- [ ] Clicking tab switches to select method
+- [ ] Resume list loads on page mount
+- [ ] Saved resumes displayed with:
+  - [ ] Resume title
+  - [ ] Version number (if applicable)
+  - [ ] Character count
+  - [ ] Last update date
+- [ ] Empty state message displays if no saved resumes
+- [ ] "Create one now" link visible in empty state
+- [ ] Click resume to select and load content
+- [ ] Selected resume content loads into form
+- [ ] Character count displays after selection
+- [ ] Resume persists when switching tabs and back
+- [ ] API call: `getResumes()` fetches saved resumes
+- [ ] Error handling: If no resumes exist, fallback message shown
+- [ ] Error handling: API failure shows user-friendly message
+- [ ] Dark mode: Resume list styled correctly (dark:bg-slate-800, etc.)
+- [ ] Dark mode: Selected state visually distinct
+
+#### Resume Input Method: Upload File
+- [ ] "📤 Upload File" tab button visible
+- [ ] Clicking tab switches to upload method
+- [ ] File input accepts .pdf files
+- [ ] File input accepts .docx files
+- [ ] File input accepts .txt files
+- [ ] File input rejects .jpg files with error
+- [ ] File input rejects .doc files with error
+- [ ] File size limit note displays (5 MB max)
+- [ ] File type note displays (PDF, DOCX, TXT accepted)
+- [ ] Selected filename displays in upload zone
+- [ ] File validation: File under 1 MB accepts immediately
+- [ ] File validation: File between 1 MB - 5 MB accepts with size feedback
+- [ ] File validation: File over 5 MB shows error:
+  - [ ] Error message: "File size exceeds 5 MB limit. Your file is X.XX MB"
+  - [ ] Error displayed in red box with dark mode support
+  - [ ] User can select new file after error
+- [ ] File validation: Invalid type shows error:
+  - [ ] Error message: "Invalid file type. Accepted: .pdf, .docx, .txt"
+  - [ ] User can select correct file after error
+- [ ] File upload process:
+  - [ ] Loading indicator shows "Extracting text..."
+  - [ ] Upload spinner visible during extraction
+  - [ ] Character count updates after extraction
+- [ ] Success: File text extracted and displayed in form
+- [ ] Success: API call `/api/v1/resumes/upload-file` made correctly
+- [ ] Success: Multipart/form-data sent (not JSON)
+- [ ] Success: Authorization Bearer token included
+- [ ] Success: Response `parsed.experience_text` used in form
+- [ ] Success message displays character count from extracted text
+- [ ] File persists when switching tabs and back
+- [ ] Error handling: Network error shows friendly message
+- [ ] Error handling: Backend error status shows details
+- [ ] Error handling: User can retry after error
+- [ ] Dark mode: Upload zone styled correctly
+- [ ] Dark mode: Error messages styled correctly
+- [ ] Dark mode: Success message styled correctly
+
+#### Resume Input Method: Paste Text
+- [ ] "📋 Paste Text" tab button visible
+- [ ] Clicking tab switches to paste method
+- [ ] Textarea visible and accepts text input
+- [ ] Character count displays and updates
+- [ ] Placeholder text helpful and clear
+- [ ] User can paste resume text directly
+- [ ] Content persists when switching tabs and back
+- [ ] No character limit enforced
+- [ ] Dark mode: Textarea styled correctly (dark:bg-slate-700)
+- [ ] Dark mode: Character count visible (dark:text-slate-50)
+
+#### Resume Input Method Integration
+- [ ] Switching between methods preserves other form fields
+- [ ] Job description textarea retains content
+- [ ] Target role retains content
+- [ ] Tone selection retains value
+- [ ] Only one method tab active at a time
+- [ ] Visual indicator shows active method
+
+#### Tailor Resume Functionality
+- [ ] Job description textarea accepts job posting text
+- [ ] Target role field accepts role title
+- [ ] Tone dropdown shows options (Professional, Casual, etc.)
+- [ ] "Tailor Resume" button visible and enabled
+- [ ] Button disabled if resume/job description empty
+- [ ] Tailor button shows loading spinner on click
+- [ ] API call: `tailorResume()` sent with:
+  - [ ] Resume content from selected method
+  - [ ] Job description text
+  - [ ] Target role
+  - [ ] Selected tone
+  - [ ] Authorization token
+- [ ] Results section displays extracted requirements
+- [ ] Results section displays tailored resume text
+- [ ] Results styled appropriately with dark mode support
+- [ ] Results can be copied to clipboard
+- [ ] Results can be saved as new resume version (if applicable)
+- [ ] Error message displays if tailor fails
+- [ ] Error handling: Network error shows message
+- [ ] Error handling: Empty resume/job description validation
+
+#### Cross-Feature Integration
+- [ ] Resume selected from library can be tailored
+- [ ] Uploaded file text can be tailored
+- [ ] Pasted text can be tailored
+- [ ] Tailored resume can be saved to library
+- [ ] Tailored resume accessible in /resumes for download
+
+### 6.6.2 Cover Letter Generation Feature
+**Route**: `/cover-letter`
+- [ ] Cover letter page loads without errors
+- [ ] Job description input visible
+- [ ] Company name input visible
+- [ ] Position title input visible
+- [ ] Tone/style selector visible
+- [ ] Generate button visible and functional
+- [ ] Results section displays generated letter
+- [ ] Generated content formatted as proper letter
+- [ ] Copy to clipboard button functional
+- [ ] Save as template button functional
+- [ ] Dark mode styling applied throughout
+- [ ] Mobile responsive layout
+
+### 6.6.3 Analyze Job Posting Feature
+**Route**: `/analyze-job`
+- [ ] Analyze job page loads without errors
+- [ ] Job posting textarea visible and functional
+- [ ] Character count displayed
+- [ ] Submit button visible
+- [ ] Analysis results display:
+  - [ ] Key skills extracted
+  - [ ] Experience requirements identified
+  - [ ] Salary range (if mentioned) highlighted
+  - [ ] Company culture indicators
+  - [ ] Growth opportunities
+  - [ ] Red flags (if any)
+- [ ] Results formatted clearly
+- [ ] Dark mode styling applied
+- [ ] Mobile responsive layout
+
+### 6.6.4 STAR Stories Generator Feature
+**Route**: `/star-stories`
+- [ ] STAR stories page loads without errors
+- [ ] Situation textarea visible
+- [ ] Task textarea visible
+- [ ] Action textarea visible
+- [ ] Result textarea visible
+- [ ] Generate/refine button visible
+- [ ] Tips/guidelines section visible
+- [ ] Generated story displays with:
+  - [ ] Proper formatting
+  - [ ] Professional language
+  - [ ] Interview-ready quality
+- [ ] Generate multiple versions button functional
+- [ ] Save story button functional
+- [ ] Copy to clipboard button functional
+- [ ] Dark mode styling applied
+- [ ] Mobile responsive layout
+
+---
+
+## 7. Phase 7: Job Application Tracker Tests
 
 ### 7.1 Applications Dashboard
 **Route**: `/applications`
@@ -423,7 +595,7 @@
 
 ---
 
-## 8. Phase 7: Advanced Analytics Tests
+## 8. Phase 8: Advanced Analytics Tests
 
 ### 8.1 Analytics Dashboard
 **Route**: `/analytics`
@@ -475,7 +647,7 @@
 
 ---
 
-## 9. Phase 8: Dark Mode Support Tests
+## 9. Phase 9: Dark Mode Support Tests
 
 ### 9.1 Theme Toggle
 - [ ] Theme toggle button visible in navbar
@@ -546,7 +718,7 @@
 
 ---
 
-## 10. Responsive Design Tests
+## 10. Cross-Cutting Concerns: Responsive Design Tests
 
 ### 10.1 Mobile (375px - 667px)
 - [ ] All pages load without horizontal scroll
@@ -573,7 +745,7 @@
 
 ---
 
-## 11. Browser Compatibility Tests
+## 11. Cross-Cutting Concerns: Browser Compatibility Tests
 
 **Browsers to Test**: Chrome, Firefox, Safari, Edge (latest 2 versions)
 
