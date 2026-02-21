@@ -326,36 +326,39 @@ export default function TailorResumePage() {
                   <div className="space-y-3">
                     {savedResumes.length > 0 ? (
                       <>
-                        <div className="grid gap-3">
+                        <select
+                          value={selectedResumeId}
+                          onChange={(e) => handleResumeSelect(e.target.value)}
+                          className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">-- Select a resume --</option>
                           {savedResumes.map((resume) => (
-                            <button
-                              key={resume.id}
-                              type="button"
-                              onClick={() => handleResumeSelect(resume.id)}
-                              className={`p-4 rounded-lg border-2 text-left transition-all ${
-                                selectedResumeId === resume.id
-                                  ? "border-blue-500 bg-blue-50 dark:bg-blue-950"
-                                  : "border-gray-200 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 hover:border-gray-300 dark:hover:border-slate-500"
-                              }`}
-                            >
-                              <h4 className="font-semibold text-gray-900 dark:text-slate-50">
-                                {resume.title}
-                              </h4>
-                              <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
-                                Version {resume.version} • {resume.content.length} characters
-                              </p>
-                              <p className="text-xs text-gray-500 dark:text-slate-500 mt-1">
-                                Updated: {new Date(resume.updated_at).toLocaleDateString()}
-                              </p>
-                            </button>
+                            <option key={resume.id} value={resume.id}>
+                              {resume.title} (v{resume.version} • {resume.content.length} chars)
+                            </option>
                           ))}
-                        </div>
+                        </select>
                         {selectedResumeId && (
-                          <div className="mt-3 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
-                            <p className="text-blue-800 dark:text-blue-200 text-sm">
-                              ✓ Selected resume loaded ({resumeText.length} characters)
-                            </p>
-                          </div>
+                          <>
+                            <div className="p-4 rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950">
+                              <div className="space-y-2">
+                                <h4 className="font-semibold text-gray-900 dark:text-slate-50">
+                                  {savedResumes.find((r) => r.id === selectedResumeId)?.title}
+                                </h4>
+                                <p className="text-sm text-gray-600 dark:text-slate-400">
+                                  Version {savedResumes.find((r) => r.id === selectedResumeId)?.version} • {resumeText.length} characters
+                                </p>
+                                <p className="text-xs text-gray-500 dark:text-slate-500">
+                                  Updated: {selectedResumeId && new Date(savedResumes.find((r) => r.id === selectedResumeId)?.updated_at || "").toLocaleDateString()}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
+                              <p className="text-blue-800 dark:text-blue-200 text-sm">
+                                ✓ Selected resume loaded ({resumeText.length} characters)
+                              </p>
+                            </div>
+                          </>
                         )}
                       </>
                     ) : (
