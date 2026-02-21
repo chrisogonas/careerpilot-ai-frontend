@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
-import { TailorResponse, Resume } from "@/lib/types";
+import { TailorResponse, Resume, CoverLetterResponse } from "@/lib/types";
 
 interface ResumeInputError {
   message: string;
@@ -32,6 +32,12 @@ export default function TailorResumePage() {
   const [uploadingFile, setUploadingFile] = useState(false);
   const [resumeInputError, setResumeInputError] = useState<ResumeInputError | null>(null);
 
+  // Cover letter toggle
+  const [generateCoverLetter, setGenerateCoverLetter] = useState(false);
+  const [companyName, setCompanyName] = useState("");
+  const [coverLetterResult, setCoverLetterResult] = useState<string | null>(null);
+  const [coverLetterLoading, setCoverLetterLoading] = useState(false);
+
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
   const ALLOWED_FILE_TYPES = [".pdf", ".docx", ".txt"];
 
@@ -53,7 +59,8 @@ export default function TailorResumePage() {
     if (isAuthenticated) {
       fetchResumes();
     }
-  }, [isAuthenticated, getResumes]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   if (!isAuthenticated) {
     router.push("/auth/login");
@@ -146,6 +153,26 @@ export default function TailorResumePage() {
 
       setResult(response);
       setStep("result");
+
+      // Generate cover letter in parallel if toggled on
+      if (generateCoverLetter) {
+        setCoverLetterLoading(true);
+        try {
+          const clResponse = await apiClient.generateCoverLetter({
+            user_id: user.id,
+            resume_text: resumeText,
+            job_description: jobDescription,
+            company_name: companyName || "the company",
+            role_title: targetRole,
+          });
+          setCoverLetterResult(clResponse.cover_letter);
+        } catch (clErr) {
+          console.error("Cover letter generation failed:", clErr);
+          setCoverLetterResult("Failed to generate cover letter. You can try again from the Cover Letter page.");
+        } finally {
+          setCoverLetterLoading(false);
+        }
+      }
     } catch (err) {
       setError(
         err instanceof Error
@@ -164,6 +191,8 @@ export default function TailorResumePage() {
     setTargetRole("");
     setTone("professional");
     setResult(null);
+    setCoverLetterResult(null);
+    setCoverLetterLoading(false);
     setError("");
   };
 
@@ -433,13 +462,54 @@ export default function TailorResumePage() {
                 </div>
               </div>
 
+              {/* Cover Letter Toggle */}
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 border border-purple-200 dark:border-purple-800 rounded-lg p-5">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={generateCoverLetter}
+                    onChange={(e) => setGenerateCoverLetter(e.target.checked)}
+                    className="mt-1 h-5 w-5 text-purple-600 rounded focus:ring-purple-500"
+                  />
+                  <div>
+                    <span className="font-semibold text-gray-900 dark:text-slate-50">
+                      Also generate a Cover Letter
+                    </span>
+                    <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
+                      A tailored cover letter will be created alongside your resume (costs 2 additional credits)
+                    </p>
+                  </div>
+                </label>
+
+                {generateCoverLetter && (
+                  <div className="mt-4 ml-8">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                      Company Name (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="e.g., Acme Corporation"
+                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                    />
+                  </div>
+                )}
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
                 disabled={loading || !resumeText.trim()}
                 className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 transition disabled:bg-gray-400 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
               >
-                {loading ? "Tailoring Resume..." : "Tailor Resume"}
+                {loading
+                  ? generateCoverLetter
+                    ? "Tailoring Resume & Generating Cover Letter..."
+                    : "Tailoring Resume..."
+                  : generateCoverLetter
+                    ? "Tailor Resume & Generate Cover Letter"
+                    : "Tailor Resume"}
               </button>
             </div>
           </form>
@@ -479,7 +549,7 @@ export default function TailorResumePage() {
                       }}
                       className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white py-2 rounded-lg font-medium transition"
                     >
-                      Copy to Clipboard
+                      Copy Resume
                     </button>
                     <button
                       onClick={handleReset}
@@ -488,6 +558,40 @@ export default function TailorResumePage() {
                       Tailor Another Resume
                     </button>
                   </div>
+
+                  {/* Cover Letter Result */}
+                  {coverLetterLoading && (
+                    <div className="mt-8 p-6 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-purple-600"></div>
+                        <p className="text-purple-800 dark:text-purple-200 font-medium">Generating cover letter...</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {coverLetterResult && !coverLetterLoading && (
+                    <div className="mt-8">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-50 mb-2 flex items-center gap-2">
+                        <span className="text-purple-600">✉️</span> Generated Cover Letter
+                      </h3>
+                      <div className="bg-purple-50 dark:bg-purple-950 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
+                        <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                          {coverLetterResult}
+                        </p>
+                      </div>
+                      <div className="mt-3">
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(coverLetterResult);
+                            alert("Cover letter copied to clipboard!");
+                          }}
+                          className="w-full bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white py-2 rounded-lg font-medium transition"
+                        >
+                          Copy Cover Letter
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
             </div>
