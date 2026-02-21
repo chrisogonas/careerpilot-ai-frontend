@@ -2,13 +2,18 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
+import { Resume } from "@/lib/types";
+
+interface ResumeInputError {
+  message: string;
+}
 
 export default function CoverLetterPage() {
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, getResumes, uploadResumeFile } = useAuth();
   const router = useRouter();
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -17,6 +22,38 @@ export default function CoverLetterPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<string | null>(null);
+
+  // Resume input method states
+  const [resumeInputMethod, setResumeInputMethod] = useState<"select" | "upload" | "paste">("select");
+  const [savedResumes, setSavedResumes] = useState<Resume[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [resumeInputError, setResumeInputError] = useState<ResumeInputError | null>(null);
+
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+  const ALLOWED_FILE_TYPES = [".pdf", ".docx", ".txt"];
+
+  // Fetch saved resumes on mount
+  useEffect(() => {
+    const fetchResumes = async () => {
+      try {
+        const resumes = await getResumes();
+        setSavedResumes(resumes);
+        if (resumes.length > 0) {
+          setSelectedResumeId(resumes[0].id);
+          setResumeText(resumes[0].content);
+        }
+      } catch (err) {
+        console.error("Failed to fetch resumes:", err);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchResumes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   if (authLoading) {
     return (
@@ -30,6 +67,65 @@ export default function CoverLetterPage() {
     router.push("/auth/login");
     return null;
   }
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setResumeInputError(null);
+
+    // Validate file type
+    const fileExt = `.${file.name.split(".").pop()?.toLowerCase()}`;
+    if (!ALLOWED_FILE_TYPES.includes(fileExt)) {
+      setResumeInputError({
+        message: `Invalid file type. Accepted types: ${ALLOWED_FILE_TYPES.join(", ")}`,
+      });
+      setUploadFile(null);
+      return;
+    }
+
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      setResumeInputError({
+        message: `File size exceeds 5 MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
+      });
+      setUploadFile(null);
+      return;
+    }
+
+    setUploadFile(file);
+  };
+
+  const handleUploadFile = async () => {
+    if (!uploadFile) {
+      setResumeInputError({ message: "Please select a file" });
+      return;
+    }
+
+    setUploadingFile(true);
+    setResumeInputError(null);
+
+    try {
+      const response = await uploadResumeFile(uploadFile);
+      setResumeText(response.parsed.experience_text);
+      setUploadFile(null);
+    } catch (err) {
+      setResumeInputError({
+        message: err instanceof Error ? err.message : "Failed to upload file",
+      });
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleResumeSelect = (id: string) => {
+    const resume = savedResumes.find((r) => r.id === id);
+    if (resume) {
+      setSelectedResumeId(id);
+      setResumeText(resume.content);
+      setResumeInputError(null);
+    }
+  };
 
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,19 +183,190 @@ export default function CoverLetterPage() {
         {!result ? (
           <form onSubmit={handleGenerate} className="bg-white rounded-lg shadow p-8">
             <div className="space-y-6">
-              {/* Resume Text */}
+              {/* Resume Text - Multiple Input Methods */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-4">
                   Your Resume *
                 </label>
-                <textarea
-                  required
-                  value={resumeText}
-                  onChange={(e) => setResumeText(e.target.value)}
-                  placeholder="Paste your resume text here..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={6}
-                />
+
+                {/* Resume Method Tabs */}
+                <div className="flex flex-wrap gap-2 mb-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResumeInputMethod("select");
+                      setResumeInputError(null);
+                      setUploadFile(null);
+                    }}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      resumeInputMethod === "select"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    📚 Select Saved
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResumeInputMethod("upload");
+                      setResumeInputError(null);
+                    }}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      resumeInputMethod === "upload"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    📤 Upload File
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setResumeInputMethod("paste");
+                      setResumeInputError(null);
+                      setUploadFile(null);
+                    }}
+                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
+                      resumeInputMethod === "paste"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    }`}
+                  >
+                    📋 Paste Text
+                  </button>
+                </div>
+
+                {/* Error Message */}
+                {resumeInputError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+                    <p className="text-red-700 text-sm">{resumeInputError.message}</p>
+                  </div>
+                )}
+
+                {/* Select Saved Resume Method */}
+                {resumeInputMethod === "select" && (
+                  <div className="space-y-3">
+                    {savedResumes.length > 0 ? (
+                      <>
+                        <div className="grid gap-3">
+                          {savedResumes.map((resume) => (
+                            <button
+                              key={resume.id}
+                              type="button"
+                              onClick={() => handleResumeSelect(resume.id)}
+                              className={`p-4 rounded-lg border-2 text-left transition-all ${
+                                selectedResumeId === resume.id
+                                  ? "border-blue-500 bg-blue-50"
+                                  : "border-gray-200 bg-gray-50 hover:border-gray-300"
+                              }`}
+                            >
+                              <h4 className="font-semibold text-gray-900">
+                                {resume.title}
+                              </h4>
+                              <p className="text-sm text-gray-600 mt-1">
+                                Version {resume.version} • {resume.content.length} characters
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">
+                                Updated: {new Date(resume.updated_at).toLocaleDateString()}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                        {selectedResumeId && (
+                          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded">
+                            <p className="text-blue-800 text-sm">
+                              ✓ Selected resume loaded ({resumeText.length} characters)
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded">
+                        <p className="text-gray-600">
+                          No saved resumes found.{" "}
+                          <a href="/resumes/new" className="text-blue-600 hover:underline">
+                            Upload a resume
+                          </a>{" "}
+                          first.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Upload File Method */}
+                {resumeInputMethod === "upload" && (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                      <p className="text-blue-800 text-sm">
+                        ℹ️ Supported formats: PDF, DOCX, TXT • Maximum size: 5 MB
+                      </p>
+                    </div>
+
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
+                      <input
+                        type="file"
+                        accept=".pdf,.docx,.txt"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                        id="resume-file-upload"
+                      />
+                      <label htmlFor="resume-file-upload" className="cursor-pointer block">
+                        <div className="text-4xl mb-3">📄</div>
+                        <p className="font-medium text-gray-900">
+                          {uploadFile ? uploadFile.name : "Click to select file"}
+                        </p>
+                        <p className="text-sm text-gray-600 mt-2">
+                          or drag and drop your resume
+                        </p>
+                      </label>
+                    </div>
+
+                    {uploadFile && !uploadingFile && (
+                      <button
+                        type="button"
+                        onClick={handleUploadFile}
+                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                      >
+                        ✓ Extract & Load Resume
+                      </button>
+                    )}
+
+                    {uploadingFile && (
+                      <div className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-center font-medium">
+                        <span className="inline-block animate-spin mr-2">⟳</span>
+                        Extracting text...
+                      </div>
+                    )}
+
+                    {resumeText && resumeInputMethod === "upload" && !uploadFile && (
+                      <div className="p-3 bg-green-50 border border-green-200 rounded">
+                        <p className="text-green-800 text-sm">
+                          ✓ Resume loaded ({resumeText.length} characters)
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Paste Text Method */}
+                {resumeInputMethod === "paste" && (
+                  <textarea
+                    value={resumeText}
+                    onChange={(e) => {
+                      setResumeText(e.target.value);
+                      setResumeInputError(null);
+                    }}
+                    placeholder="Paste your resume text here..."
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    rows={8}
+                  />
+                )}
+
+                <p className="text-gray-500 text-sm mt-2">
+                  {resumeText.length} characters loaded
+                </p>
               </div>
 
               {/* Job Description */}

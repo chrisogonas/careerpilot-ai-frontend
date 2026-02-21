@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
-import { TailorResponse, Resume, CoverLetterResponse } from "@/lib/types";
+import { TailorResponse, Resume, CoverLetterResponse, StarStoryResponse } from "@/lib/types";
 
 interface ResumeInputError {
   message: string;
@@ -37,6 +37,12 @@ export default function TailorResumePage() {
   const [companyName, setCompanyName] = useState("");
   const [coverLetterResult, setCoverLetterResult] = useState<string | null>(null);
   const [coverLetterLoading, setCoverLetterLoading] = useState(false);
+
+  // STAR stories toggle
+  const [generateStarStories, setGenerateStarStories] = useState(false);
+  const [starStoryCount, setStarStoryCount] = useState(3);
+  const [starStoriesResult, setStarStoriesResult] = useState<string[] | null>(null);
+  const [starStoriesLoading, setStarStoriesLoading] = useState(false);
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
   const ALLOWED_FILE_TYPES = [".pdf", ".docx", ".txt"];
@@ -154,7 +160,7 @@ export default function TailorResumePage() {
       setResult(response);
       setStep("result");
 
-      // Generate cover letter in parallel if toggled on
+      // Generate cover letter if toggled on
       if (generateCoverLetter) {
         setCoverLetterLoading(true);
         try {
@@ -171,6 +177,25 @@ export default function TailorResumePage() {
           setCoverLetterResult("Failed to generate cover letter. You can try again from the Cover Letter page.");
         } finally {
           setCoverLetterLoading(false);
+        }
+      }
+
+      // Generate STAR stories if toggled on
+      if (generateStarStories) {
+        setStarStoriesLoading(true);
+        try {
+          const starResponse = await apiClient.generateStarStories({
+            user_id: user.id,
+            resume_text: resumeText,
+            job_description: jobDescription,
+            count: starStoryCount,
+          });
+          setStarStoriesResult(starResponse.star_stories);
+        } catch (starErr) {
+          console.error("STAR stories generation failed:", starErr);
+          setStarStoriesResult(["Failed to generate STAR stories. You can try again from the STAR Stories page."]);
+        } finally {
+          setStarStoriesLoading(false);
         }
       }
     } catch (err) {
@@ -193,6 +218,8 @@ export default function TailorResumePage() {
     setResult(null);
     setCoverLetterResult(null);
     setCoverLetterLoading(false);
+    setStarStoriesResult(null);
+    setStarStoriesLoading(false);
     setError("");
   };
 
@@ -497,6 +524,46 @@ export default function TailorResumePage() {
                 )}
               </div>
 
+              {/* STAR Stories Toggle */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border border-green-200 dark:border-green-800 rounded-lg p-5">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={generateStarStories}
+                    onChange={(e) => setGenerateStarStories(e.target.checked)}
+                    className="mt-1 h-5 w-5 text-green-600 rounded focus:ring-green-500"
+                  />
+                  <div>
+                    <span className="font-semibold text-gray-900 dark:text-slate-50">
+                      Also generate STAR Interview Stories
+                    </span>
+                    <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
+                      Get interview-ready STAR stories (Situation, Task, Action, Result) tailored to this job (costs 1 additional credit)
+                    </p>
+                  </div>
+                </label>
+
+                {generateStarStories && (
+                  <div className="mt-4 ml-8">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                      Number of Stories
+                    </label>
+                    <select
+                      value={starStoryCount}
+                      onChange={(e) => setStarStoryCount(Number(e.target.value))}
+                      aria-label="Number of STAR stories"
+                      className="w-32 px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                    >
+                      {[1, 2, 3, 4, 5].map((n) => (
+                        <option key={n} value={n}>
+                          {n} {n === 1 ? "story" : "stories"}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+              </div>
+
               {/* Submit Button */}
               <button
                 type="submit"
@@ -504,12 +571,24 @@ export default function TailorResumePage() {
                 className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 transition disabled:bg-gray-400 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
               >
                 {loading
-                  ? generateCoverLetter
-                    ? "Tailoring Resume & Generating Cover Letter..."
-                    : "Tailoring Resume..."
-                  : generateCoverLetter
-                    ? "Tailor Resume & Generate Cover Letter"
-                    : "Tailor Resume"}
+                  ? (() => {
+                      const extras = [
+                        generateCoverLetter && "Cover Letter",
+                        generateStarStories && "STAR Stories",
+                      ].filter(Boolean);
+                      return extras.length
+                        ? `Tailoring Resume & Generating ${extras.join(" & ")}...`
+                        : "Tailoring Resume...";
+                    })()
+                  : (() => {
+                      const extras = [
+                        generateCoverLetter && "Cover Letter",
+                        generateStarStories && "STAR Stories",
+                      ].filter(Boolean);
+                      return extras.length
+                        ? `Tailor Resume & Generate ${extras.join(" & ")}`
+                        : "Tailor Resume";
+                    })()}
               </button>
             </div>
           </form>
@@ -588,6 +667,53 @@ export default function TailorResumePage() {
                           className="w-full bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white py-2 rounded-lg font-medium transition"
                         >
                           Copy Cover Letter
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STAR Stories Result */}
+                  {starStoriesLoading && (
+                    <div className="mt-8 p-6 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-green-600"></div>
+                        <p className="text-green-800 dark:text-green-200 font-medium">Generating STAR interview stories...</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {starStoriesResult && !starStoriesLoading && (
+                    <div className="mt-8">
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-50 mb-2 flex items-center gap-2">
+                        <span className="text-green-600">⭐</span> STAR Interview Stories
+                      </h3>
+                      <div className="space-y-4">
+                        {starStoriesResult.map((story, idx) => (
+                          <div
+                            key={idx}
+                            className="bg-green-50 dark:bg-green-950 p-4 rounded-lg border border-green-200 dark:border-green-800"
+                          >
+                            <p className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">
+                              Story {idx + 1}
+                            </p>
+                            <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                              {story}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-3">
+                        <button
+                          onClick={() => {
+                            const allStories = starStoriesResult
+                              .map((s, i) => `--- Story ${i + 1} ---\n${s}`)
+                              .join("\n\n");
+                            navigator.clipboard.writeText(allStories);
+                            alert("STAR stories copied to clipboard!");
+                          }}
+                          className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white py-2 rounded-lg font-medium transition"
+                        >
+                          Copy All STAR Stories
                         </button>
                       </div>
                     </div>

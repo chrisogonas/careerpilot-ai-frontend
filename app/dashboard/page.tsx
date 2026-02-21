@@ -5,6 +5,7 @@ export const dynamic = "force-dynamic";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { apiClient } from "@/lib/utils/api";
 import { UsageResponse } from "@/lib/types";
 
@@ -242,13 +243,13 @@ function ActionCard({
   icon: string;
 }) {
   return (
-    <a
+    <Link
       href={href}
       className="p-4 border border-gray-200 rounded-lg hover:shadow-lg hover:border-blue-300 transition"
     >
       <div className="text-3xl mb-2">{icon}</div>
       <h3 className="font-semibold text-gray-900">{title}</h3>
       <p className="text-sm text-gray-600 mt-1">{description}</p>
-    </a>
+    </Link>
   );
 }
