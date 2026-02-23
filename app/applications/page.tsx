@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -13,12 +13,16 @@ export default function ApplicationsPage() {
   const [localError, setLocalError] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [filterStatus, setFilterStatus] = useState<JobApplicationStatus | "all">("all");
+  const hasFetched = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
       router.push("/auth/login");
       return;
     }
+
+    if (hasFetched.current) return;
+    hasFetched.current = true;
 
     const loadApplications = async () => {
       try {
@@ -32,7 +36,8 @@ export default function ApplicationsPage() {
     };
 
     loadApplications();
-  }, [isAuthenticated, router, getApplications]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
 
   const handleDelete = async (id: string) => {
     if (deleteConfirm !== id) {

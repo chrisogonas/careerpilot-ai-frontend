@@ -110,35 +110,41 @@ export default function Home() {
               name="Free"
               price="$0"
               features={[
-                "5 resume tailors/month",
-                "5 cover letters/month",
-                "10 STAR stories/month",
-                "20 job analyses/month",
+                "100 monthly credits",
+                "3 resumes",
+                "Basic resume tailoring",
+                "Basic job analysis",
+                "Community support",
               ]}
               ctaLink="/auth/register"
             />
             <PricingCard
               name="Pro"
-              price="$15"
+              price="$9.99"
               features={[
-                "20 resume tailors/month",
-                "20 cover letters/month",
-                "50 STAR stories/month",
-                "100 job analyses/month",
+                "500 monthly credits",
+                "20 resumes",
+                "Advanced resume tailoring",
+                "Cover letter generation",
+                "STAR story generation",
+                "Priority support",
               ]}
               highlighted
-              ctaLink="/auth/register"
+              ctaLink="/subscribe"
             />
             <PricingCard
               name="Premium"
-              price="$39"
+              price="$29.99"
               features={[
-                "Unlimited usage",
-                "Priority support",
+                "2,000 monthly credits",
+                "Unlimited resumes",
+                "Unlimited resume tailoring",
+                "Cover letter generation",
+                "STAR story generation",
                 "Advanced analytics",
-                "API access",
+                "Dedicated support",
               ]}
-              ctaLink="/auth/register"
+              ctaLink="/subscribe"
             />
           </div>
         </div>
@@ -165,7 +171,7 @@ export default function Home() {
             />
             <FAQItem
               question="How many tools can I use on the Free plan?"
-              answer="The Free plan includes 5 resume tailors, 5 cover letters, 10 STAR stories, and 20 job analyses per month. Perfect for testing the platform."
+              answer="The Free plan includes 100 monthly credits with up to 3 resumes. Perfect for testing the platform."
             />
             <FAQItem
               question="Do you offer a refund if I'm not satisfied?"

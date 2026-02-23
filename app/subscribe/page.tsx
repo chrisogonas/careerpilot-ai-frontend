@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Plan } from "@/lib/types";
@@ -11,12 +11,16 @@ export default function SubscribePage() {
   const [plans, setPlans] = useState<Plan[]>([]);
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const [isLoading2, setIsLoading2] = useState(true);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user) {
       router.push("/auth/login");
       return;
     }
+    if (hasFetched.current) return;
+    hasFetched.current = true;
 
     const fetchPlans = async () => {
       try {
@@ -31,7 +35,8 @@ export default function SubscribePage() {
     };
 
     fetchPlans();
-  }, [user, router, getPlans]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoading, user]);
 
   const handleSelectPlan = async (plan: Plan) => {
     if (!plan.stripe_price_id_monthly && !plan.stripe_price_id_yearly) {
@@ -74,12 +79,12 @@ export default function SubscribePage() {
   const canShowPlans = plans && plans.length > 0;
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-950 to-slate-900 text-white">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-gray-100 text-gray-900">
       <div className="container mx-auto px-4 py-16">
         {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Choose Your Plan</h1>
-          <p className="text-xl text-slate-300 mb-8">
+          <p className="text-xl text-gray-700 mb-8">
             Unlock premium features and maximize your career potential
           </p>
 
@@ -90,7 +95,7 @@ export default function SubscribePage() {
               className={`px-6 py-2 rounded-lg font-semibold transition-all ${
                 selectedBillingCycle === "monthly"
                   ? "bg-purple-600 text-white"
-                  : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
               Monthly
@@ -100,7 +105,7 @@ export default function SubscribePage() {
               className={`px-6 py-2 rounded-lg font-semibold transition-all ${
                 selectedBillingCycle === "yearly"
                   ? "bg-purple-600 text-white"
-                  : "bg-slate-800 text-slate-300 hover:bg-slate-700"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
               Yearly
@@ -110,7 +115,7 @@ export default function SubscribePage() {
         </div>
 
         {error && (
-          <div className="mb-8 p-4 bg-red-900/20 border border-red-500 rounded-lg text-red-400">
+          <div className="mb-8 p-4 bg-red-100 border border-red-300 rounded-lg text-red-700">
             {error}
           </div>
         )}
@@ -169,7 +174,7 @@ export default function SubscribePage() {
 
                     {/* Features */}
                     <ul className="space-y-2 mb-8 flex-grow">
-                      <li className="text-slate-300">📄 {plan.max_resumes} Resume(s)</li>
+                      <li className="text-slate-300">📄 {plan.max_resumes === -1 ? "Unlimited" : plan.max_resumes} Resume(s)</li>
                       <li className="text-slate-300">⭐ {plan.monthly_credits} Monthly Credits</li>
                       {plan.features.map((feature, i) => (
                         <li key={i} className="text-slate-300">
@@ -212,7 +217,7 @@ export default function SubscribePage() {
           </div>
         ) : (
           <div className="text-center py-12">
-            <p className="text-slate-400">Loading plans...</p>
+            <p className="text-gray-500">Loading plans...</p>
           </div>
         )}
 
@@ -221,45 +226,45 @@ export default function SubscribePage() {
           <h2 className="text-3xl font-bold mb-12 text-center">Frequently Asked Questions</h2>
 
           <div className="space-y-6">
-            <details className="bg-slate-800 rounded-lg p-6 cursor-pointer group">
+            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
               <summary className="flex justify-between items-center font-semibold">
                 Can I change my plan anytime?
                 <span className="group-open:rotate-180 transition-transform">▼</span>
               </summary>
-              <p className="mt-4 text-slate-300">
+              <p className="mt-4 text-gray-700">
                 Yes! You can upgrade or downgrade your plan at any time. Changes take effect immediately
                 on your next billing cycle.
               </p>
             </details>
 
-            <details className="bg-slate-800 rounded-lg p-6 cursor-pointer group">
+            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
               <summary className="flex justify-between items-center font-semibold">
                 Do you offer refunds?
                 <span className="group-open:rotate-180 transition-transform">▼</span>
               </summary>
-              <p className="mt-4 text-slate-300">
+              <p className="mt-4 text-gray-700">
                 We offer a 30-day money-back guarantee. If you're not satisfied with your subscription,
                 contact us for a full refund.
               </p>
             </details>
 
-            <details className="bg-slate-800 rounded-lg p-6 cursor-pointer group">
+            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
               <summary className="flex justify-between items-center font-semibold">
                 What payment methods do you accept?
                 <span className="group-open:rotate-180 transition-transform">▼</span>
               </summary>
-              <p className="mt-4 text-slate-300">
+              <p className="mt-4 text-gray-700">
                 We accept all major credit and debit cards through Stripe, including Visa, Mastercard,
                 American Express, and Discover.
               </p>
             </details>
 
-            <details className="bg-slate-800 rounded-lg p-6 cursor-pointer group">
+            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
               <summary className="flex justify-between items-center font-semibold">
                 Can I cancel my subscription?
                 <span className="group-open:rotate-180 transition-transform">▼</span>
               </summary>
-              <p className="mt-4 text-slate-300">
+              <p className="mt-4 text-gray-700">
                 Yes, you can cancel your subscription anytime from your billing settings. Your access
                 will continue until the end of your current billing period.
               </p>

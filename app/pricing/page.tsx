@@ -24,13 +24,13 @@ export default function PricingPage() {
           <PricingCard
             name="Free"
             price="$0"
-            description="Perfect for getting started"
+            description="Get started with basic AI-powered career tools"
             features={[
-              "5 resume tailors/month",
-              "5 cover letters/month",
-              "10 STAR stories/month",
-              "20 job analyses/month",
-              "Basic support",
+              "100 monthly credits",
+              "3 resumes",
+              "Basic resume tailoring",
+              "Basic job analysis",
+              "Community support",
             ]}
             cta="Get Started"
             ctaLink="/auth/register"
@@ -38,35 +38,36 @@ export default function PricingPage() {
 
           <PricingCard
             name="Pro"
-            price="$15"
-            description="For serious job seekers"
+            price="$9.99"
+            description="Advanced tools for serious job seekers"
             features={[
-              "20 resume tailors/month",
-              "20 cover letters/month",
-              "50 STAR stories/month",
-              "100 job analyses/month",
-              "Email support",
-              "Advanced analytics",
+              "500 monthly credits",
+              "20 resumes",
+              "Advanced resume tailoring",
+              "Cover letter generation",
+              "STAR story generation",
+              "Priority support",
             ]}
             cta="Start Free Trial"
-            ctaLink="/auth/register"
+            ctaLink="/subscribe"
             highlighted
           />
 
           <PricingCard
             name="Premium"
-            price="$39"
-            description="For maximum career growth"
+            price="$29.99"
+            description="Unlimited access for power users"
             features={[
-              "Unlimited usage",
-              "Priority support",
+              "2,000 monthly credits",
+              "Unlimited resumes",
+              "Unlimited resume tailoring",
+              "Cover letter generation",
+              "STAR story generation",
               "Advanced analytics",
-              "API access",
-              "Custom integrations",
-              "Dedicated account manager",
+              "Dedicated support",
             ]}
             cta="Get Premium"
-            ctaLink="/auth/register"
+            ctaLink="/subscribe"
           />
         </div>
 

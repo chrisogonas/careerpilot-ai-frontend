@@ -224,27 +224,27 @@ export default function TailorResumePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-slate-50">Tailor Your Resume</h1>
-          <p className="text-gray-600 dark:text-slate-400 mt-2">
+          <h1 className="text-4xl font-bold text-gray-900">Tailor Your Resume</h1>
+          <p className="text-gray-600 mt-2">
             Optimize your resume to match specific job descriptions
           </p>
         </div>
 
         {error && (
-          <div className="bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-200 px-4 py-3 rounded mb-6">
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-6">
             {error}
           </div>
         )}
 
         {step === "input" ? (
-          <form onSubmit={handleTailor} className="bg-white dark:bg-slate-800 rounded-lg shadow p-8">
+          <form onSubmit={handleTailor} className="bg-white rounded-lg shadow p-8">
             <div className="space-y-6">
               {/* Job Description */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-50 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Job Description *
                 </label>
                 <textarea
@@ -252,17 +252,17 @@ export default function TailorResumePage() {
                   value={jobDescription}
                   onChange={(e) => setJobDescription(e.target.value)}
                   placeholder="Paste the full job description here..."
-                  className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   rows={8}
                 />
-                <p className="text-gray-500 dark:text-slate-400 text-sm mt-1">
+                <p className="text-gray-500 text-sm mt-1">
                   The more detailed, the better the tailoring
                 </p>
               </div>
 
               {/* Resume Text - Multiple Input Methods */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-50 mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-4">
                   Your Resume *
                 </label>
 
@@ -277,8 +277,8 @@ export default function TailorResumePage() {
                     }}
                     className={`px-4 py-2 rounded-lg font-medium transition-all ${
                       resumeInputMethod === "select"
-                        ? "bg-blue-500 dark:bg-blue-700 text-white"
-                        : "bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
                   >
                     📚 Select Saved
@@ -291,8 +291,8 @@ export default function TailorResumePage() {
                     }}
                     className={`px-4 py-2 rounded-lg font-medium transition-all ${
                       resumeInputMethod === "upload"
-                        ? "bg-blue-500 dark:bg-blue-700 text-white"
-                        : "bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
                   >
                     📤 Upload File
@@ -306,8 +306,8 @@ export default function TailorResumePage() {
                     }}
                     className={`px-4 py-2 rounded-lg font-medium transition-all ${
                       resumeInputMethod === "paste"
-                        ? "bg-blue-500 dark:bg-blue-700 text-white"
-                        : "bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 hover:bg-gray-300 dark:hover:bg-slate-600"
+                        ? "bg-blue-500 text-white"
+                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                     }`}
                   >
                     📋 Paste Text
@@ -316,8 +316,8 @@ export default function TailorResumePage() {
 
                 {/* Error Message */}
                 {resumeInputError && (
-                  <div className="mb-4 p-3 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded">
-                    <p className="text-red-700 dark:text-red-200 text-sm">{resumeInputError.message}</p>
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded">
+                    <p className="text-red-700 text-sm">{resumeInputError.message}</p>
                   </div>
                 )}
 
@@ -329,7 +329,7 @@ export default function TailorResumePage() {
                         <select
                           value={selectedResumeId}
                           onChange={(e) => handleResumeSelect(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         >
                           <option value="">-- Select a resume --</option>
                           {savedResumes.map((resume) => (
@@ -340,21 +340,21 @@ export default function TailorResumePage() {
                         </select>
                         {selectedResumeId && (
                           <>
-                            <div className="p-4 rounded-lg border-2 border-blue-500 bg-blue-50 dark:bg-blue-950">
+                            <div className="p-4 rounded-lg border-2 border-blue-500 bg-blue-50">
                               <div className="space-y-2">
-                                <h4 className="font-semibold text-gray-900 dark:text-slate-50">
+                                <h4 className="font-semibold text-gray-900">
                                   {savedResumes.find((r) => r.id === selectedResumeId)?.title}
                                 </h4>
-                                <p className="text-sm text-gray-600 dark:text-slate-400">
+                                <p className="text-sm text-gray-600">
                                   Version {savedResumes.find((r) => r.id === selectedResumeId)?.version} • {resumeText.length} characters
                                 </p>
-                                <p className="text-xs text-gray-500 dark:text-slate-500">
+                                <p className="text-xs text-gray-500">
                                   Updated: {selectedResumeId && new Date(savedResumes.find((r) => r.id === selectedResumeId)?.updated_at || "").toLocaleDateString()}
                                 </p>
                               </div>
                             </div>
-                            <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
-                              <p className="text-blue-800 dark:text-blue-200 text-sm">
+                            <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                              <p className="text-blue-800 text-sm">
                                 ✓ Selected resume loaded ({resumeText.length} characters)
                               </p>
                             </div>
@@ -362,10 +362,10 @@ export default function TailorResumePage() {
                         )}
                       </>
                     ) : (
-                      <div className="p-4 bg-gray-50 dark:bg-slate-700 border border-gray-200 dark:border-slate-600 rounded">
-                        <p className="text-gray-600 dark:text-slate-400">
+                      <div className="p-4 bg-gray-50 border border-gray-200 rounded">
+                        <p className="text-gray-600">
                           No saved resumes found.{" "}
-                          <a href="/resumes/new" className="text-blue-600 dark:text-blue-400 hover:underline">
+                          <a href="/resumes/new" className="text-blue-600 hover:underline">
                             Upload a resume
                           </a>{" "}
                           first.
@@ -378,13 +378,13 @@ export default function TailorResumePage() {
                 {/* Upload File Method */}
                 {resumeInputMethod === "upload" && (
                   <div className="space-y-3">
-                    <div className="p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded">
-                      <p className="text-blue-800 dark:text-blue-200 text-sm">
+                    <div className="p-3 bg-blue-50 border border-blue-200 rounded">
+                      <p className="text-blue-800 text-sm">
                         ℹ️ Supported formats: PDF, DOCX, TXT • Maximum size: 5 MB
                       </p>
                     </div>
 
-                    <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-8 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
+                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
                       <input
                         type="file"
                         accept=".pdf,.docx,.txt"
@@ -394,10 +394,10 @@ export default function TailorResumePage() {
                       />
                       <label htmlFor="resume-file-upload" className="cursor-pointer block">
                         <div className="text-4xl mb-3">📄</div>
-                        <p className="font-medium text-gray-900 dark:text-slate-50">
+                        <p className="font-medium text-gray-900">
                           {uploadFile ? uploadFile.name : "Click to select file"}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-slate-400 mt-2">
+                        <p className="text-sm text-gray-600 mt-2">
                           or drag and drop your resume
                         </p>
                       </label>
@@ -407,22 +407,22 @@ export default function TailorResumePage() {
                       <button
                         type="button"
                         onClick={handleUploadFile}
-                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-lg font-medium transition-colors"
+                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                       >
                         ✓ Extract & Load Resume
                       </button>
                     )}
 
                     {uploadingFile && (
-                      <div className="w-full px-4 py-2 bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300 rounded-lg text-center font-medium">
+                      <div className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-center font-medium">
                         <span className="inline-block animate-spin mr-2">⟳</span>
                         Extracting text...
                       </div>
                     )}
 
                     {resumeText && resumeInputMethod === "upload" && !uploadFile && (
-                      <div className="p-3 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded">
-                        <p className="text-green-800 dark:text-green-200 text-sm">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded">
+                        <p className="text-green-800 text-sm">
                           ✓ Resume loaded ({resumeText.length} characters)
                         </p>
                       </div>
@@ -439,19 +439,19 @@ export default function TailorResumePage() {
                       setResumeInputError(null);
                     }}
                     placeholder="Paste your resume text here..."
-                    className="w-full px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     rows={8}
                   />
                 )}
 
-                <p className="text-gray-500 dark:text-slate-400 text-sm mt-2">
+                <p className="text-gray-500 text-sm mt-2">
                   {resumeText.length} characters loaded
                 </p>
               </div>
 
               {/* Target Role */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-50 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Target Role *
                 </label>
                 <input
@@ -460,13 +460,13 @@ export default function TailorResumePage() {
                   value={targetRole}
                   onChange={(e) => setTargetRole(e.target.value)}
                   placeholder="e.g., Senior Data Scientist"
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
 
               {/* Tone */}
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-slate-50 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Writing Tone
                 </label>
                 <div className="space-y-2">
@@ -483,7 +483,7 @@ export default function TailorResumePage() {
                           }
                           className="h-4 w-4 text-blue-600"
                         />
-                        <span className="ml-2 text-gray-700 dark:text-slate-300 capitalize">
+                        <span className="ml-2 text-gray-700 capitalize">
                           {t}
                         </span>
                       </label>
@@ -493,7 +493,7 @@ export default function TailorResumePage() {
               </div>
 
               {/* Cover Letter Toggle */}
-              <div className="bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950 dark:to-blue-950 border border-purple-200 dark:border-purple-800 rounded-lg p-5">
+              <div className="bg-gradient-to-r from-purple-50 to-blue-50 border border-purple-200 rounded-lg p-5">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -502,10 +502,10 @@ export default function TailorResumePage() {
                     className="mt-1 h-5 w-5 text-purple-600 rounded focus:ring-purple-500"
                   />
                   <div>
-                    <span className="font-semibold text-gray-900 dark:text-slate-50">
+                    <span className="font-semibold text-gray-900">
                       Also generate a Cover Letter
                     </span>
-                    <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
+                    <p className="text-sm text-gray-600 mt-1">
                       A tailored cover letter will be created alongside your resume (costs 2 additional credits)
                     </p>
                   </div>
@@ -513,7 +513,7 @@ export default function TailorResumePage() {
 
                 {generateCoverLetter && (
                   <div className="mt-4 ml-8">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Company Name (optional)
                     </label>
                     <input
@@ -521,14 +521,14 @@ export default function TailorResumePage() {
                       value={companyName}
                       onChange={(e) => setCompanyName(e.target.value)}
                       placeholder="e.g., Acme Corporation"
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
                 )}
               </div>
 
               {/* STAR Stories Toggle */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-950 dark:to-emerald-950 border border-green-200 dark:border-green-800 rounded-lg p-5">
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-5">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <input
                     type="checkbox"
@@ -537,10 +537,10 @@ export default function TailorResumePage() {
                     className="mt-1 h-5 w-5 text-green-600 rounded focus:ring-green-500"
                   />
                   <div>
-                    <span className="font-semibold text-gray-900 dark:text-slate-50">
+                    <span className="font-semibold text-gray-900">
                       Also generate STAR Interview Stories
                     </span>
-                    <p className="text-sm text-gray-600 dark:text-slate-400 mt-1">
+                    <p className="text-sm text-gray-600 mt-1">
                       Get interview-ready STAR stories (Situation, Task, Action, Result) tailored to this job (costs 1 additional credit)
                     </p>
                   </div>
@@ -548,14 +548,14 @@ export default function TailorResumePage() {
 
                 {generateStarStories && (
                   <div className="mt-4 ml-8">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Number of Stories
                     </label>
                     <select
                       value={starStoryCount}
                       onChange={(e) => setStarStoryCount(Number(e.target.value))}
                       aria-label="Number of STAR stories"
-                      className="w-32 px-3 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                      className="w-32 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
                     >
                       {[1, 2, 3, 4, 5].map((n) => (
                         <option key={n} value={n}>
@@ -571,7 +571,7 @@ export default function TailorResumePage() {
               <button
                 type="submit"
                 disabled={loading || !resumeText.trim()}
-                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 transition disabled:bg-gray-400 dark:disabled:bg-gray-700 disabled:cursor-not-allowed"
+                className="w-full bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
               >
                 {loading
                   ? (() => {
@@ -596,28 +596,28 @@ export default function TailorResumePage() {
             </div>
           </form>
         ) : (
-          <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-8">
+          <div className="bg-white rounded-lg shadow p-8">
             <div className="mb-6">
-              <h2 className="text-2xl font-bold text-gray-900 dark:text-slate-50 mb-4">
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 Tailored Resume
               </h2>
               {result && (
                 <>
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-50 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
                       Extracted Requirements
                     </h3>
-                    <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap">
+                    <p className="text-gray-700 whitespace-pre-wrap">
                       {result.extracted_requirements}
                     </p>
                   </div>
 
                   <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-50 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
                       Your Tailored Resume
                     </h3>
-                    <div className="bg-gray-50 dark:bg-slate-700 p-4 rounded-lg border border-gray-200 dark:border-slate-600">
-                      <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap">
+                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                      <p className="text-gray-700 whitespace-pre-wrap">
                         {result.tailored_resume}
                       </p>
                     </div>
@@ -629,13 +629,13 @@ export default function TailorResumePage() {
                         navigator.clipboard.writeText(result.tailored_resume);
                         alert("Resume copied to clipboard!");
                       }}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white py-2 rounded-lg font-medium transition"
+                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition"
                     >
                       Copy Resume
                     </button>
                     <button
                       onClick={handleReset}
-                      className="flex-1 border border-gray-300 dark:border-slate-600 text-gray-700 dark:text-slate-300 py-2 rounded-lg font-medium hover:bg-gray-50 dark:hover:bg-slate-700 transition"
+                      className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition"
                     >
                       Tailor Another Resume
                     </button>
@@ -643,21 +643,21 @@ export default function TailorResumePage() {
 
                   {/* Cover Letter Result */}
                   {coverLetterLoading && (
-                    <div className="mt-8 p-6 bg-purple-50 dark:bg-purple-950 border border-purple-200 dark:border-purple-800 rounded-lg">
+                    <div className="mt-8 p-6 bg-purple-50 border border-purple-200 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-purple-600"></div>
-                        <p className="text-purple-800 dark:text-purple-200 font-medium">Generating cover letter...</p>
+                        <p className="text-purple-800 font-medium">Generating cover letter...</p>
                       </div>
                     </div>
                   )}
 
                   {coverLetterResult && !coverLetterLoading && (
                     <div className="mt-8">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-50 mb-2 flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
                         <span className="text-purple-600">✉️</span> Generated Cover Letter
                       </h3>
-                      <div className="bg-purple-50 dark:bg-purple-950 p-4 rounded-lg border border-purple-200 dark:border-purple-800">
-                        <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
                           {coverLetterResult}
                         </p>
                       </div>
@@ -667,7 +667,7 @@ export default function TailorResumePage() {
                             navigator.clipboard.writeText(coverLetterResult);
                             alert("Cover letter copied to clipboard!");
                           }}
-                          className="w-full bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 text-white py-2 rounded-lg font-medium transition"
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition"
                         >
                           Copy Cover Letter
                         </button>
@@ -677,29 +677,29 @@ export default function TailorResumePage() {
 
                   {/* STAR Stories Result */}
                   {starStoriesLoading && (
-                    <div className="mt-8 p-6 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-lg">
+                    <div className="mt-8 p-6 bg-green-50 border border-green-200 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className="animate-spin rounded-full h-5 w-5 border-t-2 border-b-2 border-green-600"></div>
-                        <p className="text-green-800 dark:text-green-200 font-medium">Generating STAR interview stories...</p>
+                        <p className="text-green-800 font-medium">Generating STAR interview stories...</p>
                       </div>
                     </div>
                   )}
 
                   {starStoriesResult && !starStoriesLoading && (
                     <div className="mt-8">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-slate-50 mb-2 flex items-center gap-2">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
                         <span className="text-green-600">⭐</span> STAR Interview Stories
                       </h3>
                       <div className="space-y-4">
                         {starStoriesResult.map((story, idx) => (
                           <div
                             key={idx}
-                            className="bg-green-50 dark:bg-green-950 p-4 rounded-lg border border-green-200 dark:border-green-800"
+                            className="bg-green-50 p-4 rounded-lg border border-green-200"
                           >
-                            <p className="text-sm font-semibold text-green-700 dark:text-green-300 mb-2">
+                            <p className="text-sm font-semibold text-green-700 mb-2">
                               Story {idx + 1}
                             </p>
-                            <p className="text-gray-700 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">
+                            <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
                               {story}
                             </p>
                           </div>
@@ -714,7 +714,7 @@ export default function TailorResumePage() {
                             navigator.clipboard.writeText(allStories);
                             alert("STAR stories copied to clipboard!");
                           }}
-                          className="w-full bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white py-2 rounded-lg font-medium transition"
+                          className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition"
                         >
                           Copy All STAR Stories
                         </button>

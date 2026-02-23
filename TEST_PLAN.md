@@ -1,9 +1,10 @@
 # CareerPilot AI Frontend - Comprehensive System Test Plan
 
-**Test Date**: February 20, 2026  
+**Test Date**: February 23, 2026  
 **Environment**: Production Build (Next.js 16.1.6)  
 **Build Version**: Latest (29 routes, 0 TypeScript errors)  
-**Scope**: All 9 implementation phases (including AI Augmentation Features) + Dark Mode Support + Responsive Design + Browser Compatibility
+**Last Updated**: February 23, 2026 (Backend Copilot Integration Complete)  
+**Scope**: All 9 implementation phases (including AI Augmentation Features) + Dropdown Resume Selection + Responsive Design + Browser Compatibility
 
 ---
 
@@ -34,7 +35,6 @@
 - [ ] CTA buttons are interactive and functional
 - [ ] Navigation bar displays correctly
 - [ ] Mobile responsiveness on phone/tablet/desktop
-- [ ] Theme toggle button visible in navbar
 - [ ] No console errors or warnings
 
 **Route**: `/pricing`
@@ -257,7 +257,6 @@
 - [ ] Create resume page loads
 - [ ] Resume title input accepts text
 - [ ] Upload method toggle works (Paste Text / Upload File)
-- [ ] Dark mode variants display correctly
 
 #### Paste Text Method
 - [ ] Text method tab displays textarea
@@ -355,7 +354,6 @@
 - [ ] "Job Description" textarea visible and functional
 - [ ] "Target Role" field visible and editable
 - [ ] "Tone" dropdown visible with options
-- [ ] Dark mode styling applied correctly
 - [ ] Page responsive on mobile/tablet/desktop
 
 #### Resume Input Method: Select Saved Resume
@@ -376,8 +374,6 @@
 - [ ] API call: `getResumes()` fetches saved resumes
 - [ ] Error handling: If no resumes exist, fallback message shown
 - [ ] Error handling: API failure shows user-friendly message
-- [ ] Dark mode: Resume list styled correctly (dark:bg-slate-800, etc.)
-- [ ] Dark mode: Selected state visually distinct
 
 #### Resume Input Method: Upload File
 - [ ] "📤 Upload File" tab button visible
@@ -394,7 +390,6 @@
 - [ ] File validation: File between 1 MB - 5 MB accepts with size feedback
 - [ ] File validation: File over 5 MB shows error:
   - [ ] Error message: "File size exceeds 5 MB limit. Your file is X.XX MB"
-  - [ ] Error displayed in red box with dark mode support
   - [ ] User can select new file after error
 - [ ] File validation: Invalid type shows error:
   - [ ] Error message: "Invalid file type. Accepted: .pdf, .docx, .txt"
@@ -413,9 +408,6 @@
 - [ ] Error handling: Network error shows friendly message
 - [ ] Error handling: Backend error status shows details
 - [ ] Error handling: User can retry after error
-- [ ] Dark mode: Upload zone styled correctly
-- [ ] Dark mode: Error messages styled correctly
-- [ ] Dark mode: Success message styled correctly
 
 #### Resume Input Method: Paste Text
 - [ ] "📋 Paste Text" tab button visible
@@ -426,8 +418,6 @@
 - [ ] User can paste resume text directly
 - [ ] Content persists when switching tabs and back
 - [ ] No character limit enforced
-- [ ] Dark mode: Textarea styled correctly (dark:bg-slate-700)
-- [ ] Dark mode: Character count visible (dark:text-slate-50)
 
 #### Resume Input Method Integration
 - [ ] Switching between methods preserves other form fields
@@ -647,74 +637,56 @@
 
 ---
 
-## 9. Phase 9: Dark Mode Support Tests
+## 9. Phase 9: Dropdown Resume Selection UI Tests
 
-### 9.1 Theme Toggle
-- [ ] Theme toggle button visible in navbar
-- [ ] Toggle button displays correct icon:
-  - [ ] Moon (🌙) in light mode
-  - [ ] Sun (☀️) in dark mode
-- [ ] Clicking toggle switches theme
-- [ ] Theme change applies immediately
-- [ ] No flash of wrong theme
-- [ ] Smooth transition between themes
+*Note: Previous dark mode tests removed as of Feb 23, 2026 update (ThemeContext/ThemeToggle removed)*
 
-### 9.2 Light Mode
-- [ ] Background color: light (slate-50)
-- [ ] Text color: dark (slate-900)
-- [ ] Cards: white background
-- [ ] Borders: light (slate-200)
-- [ ] Links: blue and hover correctly
-- [ ] Buttons render with light styling
-- [ ] Form inputs visible and styled
-- [ ] Navigation bar styled correctly
+### 9.1 Dropdown Select Component
+- [ ] Dropdown displays as native HTML `<select>` element
+- [ ] Default option shows "-- Select a resume --"
+- [ ] Dropdown expands to show all saved resumes
+- [ ] Each option displays: "{Title} (v{Version} • {CharCount} chars)"
+- [ ] Option text is readable and properly formatted
+- [ ] Dropdown collapses when option selected
+- [ ] Value attribute matches selected resume ID
 
-### 9.3 Dark Mode
-- [ ] Background color: dark (slate-950)
-- [ ] Text color: light (slate-50)
-- [ ] Cards: dark background (slate-800)
-- [ ] Borders: dark (slate-800)
-- [ ] Links: styled for dark mode
-- [ ] Buttons render with dark styling
-- [ ] Form inputs visible in dark mode
-- [ ] Navigation bar styled correctly
-- [ ] All interactive elements visible
+### 9.2 Resume Selection Behavior
+- [ ] Clicking dropdown opens option list
+- [ ] Can scroll through options if many resumes
+- [ ] Selecting option loads resume immediately
+- [ ] Selected resume content populates form fields
+- [ ] Character count updates after selection
+- [ ] Form state persists when switching tabs
+- [ ] Can change selection by clicking dropdown again
+- [ ] Empty option clears selection
 
-### 9.4 System Preference Detection
-- [ ] On first visit, detects system preference
-- [ ] If system is light: app loads in light mode
-- [ ] If system is dark: app loads in dark mode
-- [ ] User can override system preference
-- [ ] Override persists after refresh
+### 9.3 Preview Card Display
+- [ ] Preview card shows only when resume selected
+- [ ] Preview card displays:
+  - [ ] Resume title
+  - [ ] Version number
+  - [ ] Character count
+  - [ ] Last update date
+- [ ] Success message shows: "✓ Selected resume loaded (X characters)"
+- [ ] Preview card styled with blue border/background
+- [ ] Preview card positioned below dropdown
+- [ ] Multiple resumes show different preview data
 
-### 9.5 Theme Persistence
-- [ ] Selected theme saved to localStorage
-- [ ] localStorage key is `careerpilot_theme`
-- [ ] Theme persists after page refresh
-- [ ] Theme persists after browser restart
-- [ ] Clear localStorage removes preference
-- [ ] Validity of stored value verified
+### 9.4 Dropdown vs Button List Comparison
+- [ ] Dropdown uses O(1) space (always 1 line height)
+- [ ] Button list was O(n) space (grew with resume count)
+- [ ] Dropdown handles 100+ resumes without UI bloat
+- [ ] Dropdown accessible via keyboard (arrow keys)
+- [ ] Dropdown works with screen readers
+- [ ] Dropdown maintains semantic HTML
 
-### 9.6 Theme Consistency
-- [ ] All 29 pages respect dark mode
-- [ ] All components dark mode compatible:
-  - [ ] Cards
-  - [ ] Forms
-  - [ ] Buttons
-  - [ ] Links
-  - [ ] Navigation
-  - [ ] Tables
-  - [ ] Modals/Dialogs
-- [ ] No elements invisible in either mode
-- [ ] Contrast ratios meet accessibility standards
-
-### 9.7 Dark Mode Edge Cases
-- [ ] Charts/graphs visible in dark mode
-- [ ] Images have proper contrast
-- [ ] Third-party components (e.g., Stripe form) styled appropriately
-- [ ] Hover states visible in dark mode
-- [ ] Focus states visible in dark mode
-- [ ] Errors/warnings visible in dark mode
+### 9.5 Integration with Resume Methods
+- [ ] Dropdown is primary "Select Saved" method
+- [ ] Upload file method still functional
+- [ ] Paste text method still functional
+- [ ] Switching between methods preserves form state
+- [ ] Dropdown selection clears when switching tabs
+- [ ] Re-selecting shows same resume in dropdown
 
 ---
 
@@ -1028,7 +1000,7 @@
    - Create Resume → Edit → Download
    - Create Application → Status Update
    - Subscribe to Pro Plan
-   - Toggle Dark Mode
+   - Select Resume from Dropdown
 2. Test on 2 browsers (Chrome + Firefox or Safari)
 3. Test on mobile device/simulator
 
@@ -1087,7 +1059,7 @@ Sign-Off: ☐ Ready for Deployment / ☐ Need More Testing
 - Authentication flows (JWT, 2FA, password reset)
 - Payment integration (Stripe)
 - File uploads (resume PDFs/DOCX)
-- Dark mode theme persistence
+- Resume dropdown selection functionality
 - Session management across browser refresh
 
 **Medium-Risk Areas**:
@@ -1109,7 +1081,7 @@ Sign-Off: ☐ Ready for Deployment / ☐ Need More Testing
 - ✅ Zero critical/blocker issues
 - ✅ Authentication working securely
 - ✅ Payments working correctly
-- ✅ Dark mode functional
+- ✅ Resume dropdown selection working
 - ✅ Build compiles without errors
 - ✅ All 29 routes accessible
 - ✅ No security vulnerabilities

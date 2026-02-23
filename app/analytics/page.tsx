@@ -13,6 +13,7 @@ export default function AnalyticsPage() {
   const [localError, setLocalError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!isAuthenticated) {
       router.push("/auth/login");
       return;
@@ -30,7 +31,7 @@ export default function AnalyticsPage() {
     };
 
     loadAnalytics();
-  }, [isAuthenticated, router, getAnalytics]);
+  }, [isLoading, isAuthenticated, router]);
 
   if (isLoading && !analytics) {
     return (
@@ -144,12 +145,16 @@ export default function AnalyticsPage() {
           </div>
         </div>
 
-        {/* Application Status Breakdown */}
+        {/* Activity Breakdown */}
         <div className="bg-white rounded-lg shadow p-6 border border-slate-200 mb-8">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">Application Status Breakdown</h2>
-          <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+          <h2 className="text-2xl font-bold text-slate-900 mb-6">Activity Breakdown</h2>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {Object.entries(metrics.total_by_status).map(([status, count]) => {
               const statusLabels: Record<string, string> = {
+                resume_tailor: "Resume Tailors",
+                job_analysis: "Job Analyses",
+                cover_letter: "Cover Letters",
+                star_stories: "STAR Stories",
                 saved: "Saved",
                 applied: "Applied",
                 phone_screen: "Phone Screen",
@@ -162,6 +167,10 @@ export default function AnalyticsPage() {
               };
 
               const statusColors: Record<string, string> = {
+                resume_tailor: "bg-blue-100 text-blue-700",
+                job_analysis: "bg-amber-100 text-amber-700",
+                cover_letter: "bg-purple-100 text-purple-700",
+                star_stories: "bg-green-100 text-green-700",
                 saved: "bg-slate-100 text-slate-700",
                 applied: "bg-blue-100 text-blue-700",
                 phone_screen: "bg-cyan-100 text-cyan-700",
@@ -173,9 +182,12 @@ export default function AnalyticsPage() {
                 withdrawn: "bg-gray-100 text-gray-700",
               };
 
+              const label = statusLabels[status] || status.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+              const colorClass = statusColors[status] || "bg-slate-100 text-slate-700";
+
               return (
-                <div key={status} className={`rounded-lg p-4 text-center ${statusColors[status]}`}>
-                  <p className="text-sm font-semibold mb-2">{statusLabels[status]}</p>
+                <div key={status} className={`rounded-lg p-4 text-center ${colorClass}`}>
+                  <p className="text-sm font-semibold mb-2">{label}</p>
                   <p className="text-2xl font-bold">{count}</p>
                 </div>
               );

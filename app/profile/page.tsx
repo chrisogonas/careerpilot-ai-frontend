@@ -1,17 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/context/AuthContext";
+import { apiClient } from "@/lib/utils/api";
 import Link from "next/link";
 import { ProfileData } from "@/lib/types";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, getSubscription, subscription, currentPlan } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
+  const [creditsRemaining, setCreditsRemaining] = useState<number | null>(null);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -19,23 +22,45 @@ export default function ProfilePage() {
       return;
     }
 
-    // In a real app, we'd fetch the full profile data
-    // For now, we'll use the user from context
+    if (!user) return;
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+
+    const fetchProfile = async () => {
+      try {
+        const [, usageData] = await Promise.all([
+          getSubscription(),
+          apiClient.getUsage(),
+        ]);
+        setCreditsRemaining(usageData.credits_remaining);
+      } catch (err) {
+        console.error("Failed to fetch profile data:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, user]);
+
+  // Update profile when subscription data is available
+  useEffect(() => {
     if (user) {
+      const planName = subscription?.plan || "free";
       setProfile({
         id: user.id,
         email: user.email,
         full_name: user.full_name,
-        plan: "free",
-        credits_remaining: 100,
+        plan: planName,
+        credits_remaining: creditsRemaining ?? 0,
         email_verified: user.is_verified === "verified",
         two_fa_enabled: false,
         created_at: user.created_at,
         updated_at: user.updated_at,
       });
     }
-    setIsLoading(false);
-  }, [isAuthenticated, user, router]);
+  }, [user, subscription, currentPlan, creditsRemaining]);
 
   if (isLoading) {
     return (
@@ -137,9 +162,9 @@ export default function ProfilePage() {
                 <div className="text-center">
                   <p className="text-gray-600 text-sm mb-2">Credits Remaining</p>
                   <p className="text-4xl font-bold text-blue-600">{profile.credits_remaining}</p>
-                  <p className="text-gray-600 text-sm mt-4">
-                    Upgrade your plan to get more credits
-                  </p>
+                  <Link href="/subscribe" className="text-blue-600 hover:underline text-sm mt-4 inline-block">
+                    Upgrade your plan to get more credits →
+                  </Link>
                 </div>
               </div>
             </div>
@@ -154,7 +179,7 @@ export default function ProfilePage() {
               🔐 Security Settings
             </Link>
             <Link
-              href="/pricing"
+              href="/subscribe"
               className="flex items-center justify-center px-4 py-3 bg-green-50 hover:bg-green-100 text-green-600 rounded-lg transition-colors font-medium"
             >
               ⭐ Upgrade Plan
@@ -192,7 +217,7 @@ export default function ProfilePage() {
               </Link>
             </li>
             <li>
-              <Link href="/pricing" className="text-blue-600 hover:underline">
+              <Link href="/subscribe" className="text-blue-600 hover:underline">
                 → View Pricing Plans
               </Link>
             </li>

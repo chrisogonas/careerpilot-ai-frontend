@@ -671,7 +671,7 @@ class ApiClient {
 
   // Analytics Methods
   async getAnalytics(): Promise<UserAnalytics> {
-    const response = await fetch(`${this.baseURL}/analytics`, {
+    const response = await fetch(`${this.baseURL}/analytics/me`, {
       method: "GET",
       headers: this.getHeaders(),
     });

@@ -115,8 +115,14 @@ export default function DashboardPage() {
               <p className="text-5xl font-bold text-blue-600">
                 {usage.credits_remaining}
               </p>
-              <p className="text-gray-600 text-sm mt-2">
-                Use credits for AI-powered features
+              <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+                <div
+                  className="bg-blue-600 h-2 rounded-full transition-all"
+                  style={{ width: `${Math.min((usage.credits_remaining / usage.monthly_credits) * 100, 100)}%` }}
+                ></div>
+              </div>
+              <p className="text-gray-500 text-xs mt-2">
+                of {usage.monthly_credits} monthly credits
               </p>
             </div>
 
@@ -128,39 +134,48 @@ export default function DashboardPage() {
               <p className="text-sm opacity-75 mb-4">
                 Get more features and credits
               </p>
-              <button className="w-full bg-white text-blue-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
+              <button onClick={() => router.push("/subscribe")} className="w-full bg-white text-blue-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
                 View Plans
               </button>
             </div>
           </div>
         )}
 
-        {/* Quotas */}
-        {usage && (
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">
-              Monthly Quotas
+        {/* Usage This Month */}
+        {usage && usage.usage_this_month && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              Usage This Month
             </h2>
+            <p className="text-gray-500 text-sm mb-6">
+              Credits used: {
+                Object.values(usage.usage_this_month).reduce((sum, op) => sum + op.credits_spent, 0)
+              } of {usage.monthly_credits}
+            </p>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <QuotaCard
+              <UsageCard
                 title="Resume Tailors"
-                used={0}
-                limit={usage.quotas.resume_tailors_per_month}
+                count={usage.usage_this_month.resume_tailors?.count ?? 0}
+                creditsSpent={usage.usage_this_month.resume_tailors?.credits_spent ?? 0}
+                costPer={usage.operation_costs?.resume_tailor ?? 2}
               />
-              <QuotaCard
+              <UsageCard
                 title="Cover Letters"
-                used={0}
-                limit={usage.quotas.cover_letters_per_month}
+                count={usage.usage_this_month.cover_letters?.count ?? 0}
+                creditsSpent={usage.usage_this_month.cover_letters?.credits_spent ?? 0}
+                costPer={usage.operation_costs?.cover_letter ?? 2}
               />
-              <QuotaCard
+              <UsageCard
                 title="STAR Stories"
-                used={0}
-                limit={usage.quotas.star_stories_per_month}
+                count={usage.usage_this_month.star_stories?.count ?? 0}
+                creditsSpent={usage.usage_this_month.star_stories?.credits_spent ?? 0}
+                costPer={usage.operation_costs?.star_stories ?? 1}
               />
-              <QuotaCard
+              <UsageCard
                 title="Job Analyses"
-                used={0}
-                limit={usage.quotas.job_analyses_per_month}
+                count={usage.usage_this_month.job_analyses?.count ?? 0}
+                creditsSpent={usage.usage_this_month.job_analyses?.credits_spent ?? 0}
+                costPer={usage.operation_costs?.job_analysis ?? 1}
               />
             </div>
           </div>
@@ -203,30 +218,30 @@ export default function DashboardPage() {
   );
 }
 
-function QuotaCard({
+function UsageCard({
   title,
-  used,
-  limit,
+  count,
+  creditsSpent,
+  costPer,
 }: {
   title: string;
-  used: number;
-  limit: number;
+  count: number;
+  creditsSpent: number;
+  costPer: number;
 }) {
-  const percentage = (used / limit) * 100;
-
   return (
-    <div className="p-4 background-gray-50 rounded-lg border border-gray-200">
-      <h3 className="text-sm font-medium text-gray-900 mb-2">{title}</h3>
-      <div className="flex items-baseline gap-1 mb-3">
-        <span className="text-2xl font-bold text-gray-900">{used}</span>
-        <span className="text-gray-500">/ {limit}</span>
+    <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
+      <h3 className="text-sm font-medium text-gray-600 mb-2">{title}</h3>
+      <div className="flex items-baseline gap-1 mb-1">
+        <span className="text-3xl font-bold text-gray-900">{count}</span>
+        <span className="text-gray-500 text-sm">uses</span>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div
-          className="bg-blue-600 h-2 rounded-full transition-all"
-          style={{ width: `${Math.min(percentage, 100)}%` }}
-        ></div>
-      </div>
+      <p className="text-sm text-gray-500">
+        {creditsSpent} credit{creditsSpent !== 1 ? "s" : ""} spent
+      </p>
+      <p className="text-xs text-gray-400 mt-1">
+        {costPer} credit{costPer !== 1 ? "s" : ""} per use
+      </p>
     </div>
   );
 }

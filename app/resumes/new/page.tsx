@@ -148,21 +148,21 @@ export default function NewResumePage() {
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <main className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
       <div className="container mx-auto px-4 py-16">
         {/* Header */}
         <div className="mb-12">
-          <Link href="/resumes" className="text-blue-600 hover:underline mb-4 inline-block dark:text-blue-400">
+          <Link href="/resumes" className="text-blue-600 hover:underline mb-4 inline-block">
             ← Back to Resumes
           </Link>
-          <h1 className="text-4xl font-bold text-gray-900 dark:text-slate-50">Upload Resume</h1>
-          <p className="text-gray-600 dark:text-slate-400 mt-2">Add your resume by uploading a file or pasting text</p>
+          <h1 className="text-4xl font-bold text-gray-900">Upload Resume</h1>
+          <p className="text-gray-600 mt-2">Add your resume by uploading a file or pasting text</p>
         </div>
 
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-md p-8">
+        <div className="bg-white rounded-lg shadow-md p-8">
           {/* Title Input */}
           <div className="mb-8">
-            <label className="block text-sm font-semibold text-gray-900 dark:text-slate-50 mb-2">
+            <label className="block text-sm font-semibold text-gray-900 mb-2">
               Resume Title <span className="text-red-500">*</span>
             </label>
             <input
@@ -170,16 +170,16 @@ export default function NewResumePage() {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g., Senior Software Engineer Resume"
-              className="w-full px-4 py-2 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
-            <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+            <p className="text-xs text-gray-500 mt-1">
               This is how we'll label your resume in your library
             </p>
           </div>
 
           {/* Upload Method Toggle */}
           <div className="mb-8">
-            <label className="block text-sm font-semibold text-gray-900 dark:text-slate-50 mb-4">
+            <label className="block text-sm font-semibold text-gray-900 mb-4">
               How would you like to add your resume? <span className="text-red-500">*</span>
             </label>
             <div className="flex gap-4 mb-6">
@@ -192,8 +192,8 @@ export default function NewResumePage() {
                 }}
                 className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all font-medium ${
                   uploadMethod === "text"
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-200"
-                    : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 hover:border-gray-400 dark:hover:border-slate-500"
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-gray-300 bg-white text-gray-900 hover:border-gray-400"
                 }`}
               >
                 📋 Paste Text
@@ -207,8 +207,8 @@ export default function NewResumePage() {
                 }}
                 className={`flex-1 py-3 px-4 rounded-lg border-2 transition-all font-medium ${
                   uploadMethod === "file"
-                    ? "border-blue-500 bg-blue-50 dark:bg-blue-950 text-blue-900 dark:text-blue-200"
-                    : "border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-gray-900 dark:text-slate-100 hover:border-gray-400 dark:hover:border-slate-500"
+                    ? "border-blue-500 bg-blue-50 text-blue-900"
+                    : "border-gray-300 bg-white text-gray-900 hover:border-gray-400"
                 }`}
               >
                 📤 Upload File
@@ -218,10 +218,10 @@ export default function NewResumePage() {
 
           {/* Error Message */}
           {uploadError && (
-            <div className="mb-6 p-4 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-red-800 dark:text-red-200 font-medium">{uploadError.message}</p>
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-red-800 font-medium">{uploadError.message}</p>
               {uploadError.detail && (
-                <p className="text-red-700 dark:text-red-300 text-sm mt-1">{uploadError.detail}</p>
+                <p className="text-red-700 text-sm mt-1">{uploadError.detail}</p>
               )}
             </div>
           )}
@@ -229,7 +229,7 @@ export default function NewResumePage() {
           {/* Paste Text Method */}
           {uploadMethod === "text" && (
             <div className="mb-8">
-              <label className="block text-sm font-semibold text-gray-900 dark:text-slate-50 mb-4">
+              <label className="block text-sm font-semibold text-gray-900 mb-4">
                 Paste Your Resume <span className="text-red-500">*</span>
               </label>
               <textarea
@@ -239,9 +239,9 @@ export default function NewResumePage() {
                   setUploadError(null);
                 }}
                 placeholder="Paste your complete resume text here..."
-                className="w-full h-64 px-4 py-3 border border-gray-300 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-50 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono text-sm"
+                className="w-full h-64 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none font-mono text-sm"
               />
-              <p className="text-xs text-gray-500 dark:text-slate-400 mt-2">
+              <p className="text-xs text-gray-500 mt-2">
                 {content.length} characters • Plain text format recommended
               </p>
             </div>
@@ -250,19 +250,19 @@ export default function NewResumePage() {
           {/* File Upload Method */}
           {uploadMethod === "file" && (
             <div className="mb-8">
-              <label className="block text-sm font-semibold text-gray-900 dark:text-slate-50 mb-4">
+              <label className="block text-sm font-semibold text-gray-900 mb-4">
                 Select File <span className="text-red-500">*</span>
               </label>
               
               {/* File Size Note */}
-              <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
-                <p className="text-blue-800 dark:text-blue-200 text-sm">
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-blue-800 text-sm">
                   ℹ️ Supported formats: PDF, DOCX, TXT • Maximum size: 5 MB
                 </p>
               </div>
 
               {/* File Input with Drag & Drop */}
-              <div className="border-2 border-dashed border-gray-300 dark:border-slate-600 rounded-lg p-8 text-center hover:border-blue-500 dark:hover:border-blue-400 transition-colors">
+              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
                 <input
                   type="file"
                   accept=".pdf,.docx,.txt"
@@ -272,10 +272,10 @@ export default function NewResumePage() {
                 />
                 <label htmlFor="file-upload" className="cursor-pointer block">
                   <div className="text-4xl mb-3">📄</div>
-                  <p className="font-medium text-gray-900 dark:text-slate-50">
+                  <p className="font-medium text-gray-900">
                     {uploadFile ? uploadFile.name : "Click to select file"}
                   </p>
-                  <p className="text-sm text-gray-600 dark:text-slate-400 mt-2">
+                  <p className="text-sm text-gray-600 mt-2">
                     or drag and drop your resume
                   </p>
                 </label>
@@ -285,10 +285,10 @@ export default function NewResumePage() {
 
           {/* Preview (if text is available) */}
           {content && (
-            <div className="mb-8 p-4 bg-gray-50 dark:bg-slate-700 rounded-lg border border-gray-200 dark:border-slate-600">
-              <p className="text-sm font-medium text-gray-900 dark:text-slate-50 mb-3">Preview</p>
-              <div className="bg-white dark:bg-slate-800 p-4 rounded border border-gray-200 dark:border-slate-600 max-h-48 overflow-y-auto">
-                <div className="text-sm text-gray-800 dark:text-slate-300 whitespace-pre-wrap font-mono leading-relaxed">
+            <div className="mb-8 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <p className="text-sm font-medium text-gray-900 mb-3">Preview</p>
+              <div className="bg-white p-4 rounded border border-gray-200 max-h-48 overflow-y-auto">
+                <div className="text-sm text-gray-800 whitespace-pre-wrap font-mono leading-relaxed">
                   {content}
                 </div>
               </div>
@@ -305,7 +305,7 @@ export default function NewResumePage() {
                 (uploadMethod === "text" && !content.trim()) ||
                 (uploadMethod === "file" && !uploadFile)
               }
-              className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isCreating ? (
                 <span className="flex items-center justify-center">
@@ -318,7 +318,7 @@ export default function NewResumePage() {
             </button>
             <Link
               href="/resumes"
-              className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 dark:bg-slate-700 dark:hover:bg-slate-600 text-gray-900 dark:text-slate-50 rounded-lg font-semibold transition-colors text-center"
+              className="flex-1 px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-900 rounded-lg font-semibold transition-colors text-center"
             >
               Cancel
             </Link>
@@ -326,9 +326,9 @@ export default function NewResumePage() {
         </div>
 
         {/* Tips */}
-        <div className="mt-12 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-6 max-w-2xl mx-auto">
-          <h3 className="text-lg font-semibold text-blue-900 dark:text-blue-200 mb-3">💡 Tips for Best Results</h3>
-          <ul className="text-blue-800 dark:text-blue-300 space-y-2">
+        <div className="mt-12 bg-blue-50 border border-blue-200 rounded-lg p-6 max-w-2xl mx-auto">
+          <h3 className="text-lg font-semibold text-blue-900 mb-3">💡 Tips for Best Results</h3>
+          <ul className="text-blue-800 space-y-2">
             <li>✓ Keep formatting simple and clean for ATS compatibility</li>
             <li>✓ Use standard section headings (EXPERIENCE, EDUCATION, SKILLS)</li>
             <li>✓ Include measurable achievements and results</li>

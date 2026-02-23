@@ -145,15 +145,32 @@ export interface DeleteAccountResponse {
 }
 
 // Usage Types
+export interface UsageBreakdown {
+  count: number;
+  credits_spent: number;
+}
+
 export interface UsageResponse {
   user_id: string;
   plan: "free" | "pro" | "premium";
   credits_remaining: number;
+  monthly_credits: number;
+  operation_costs: Record<string, number>;
+  usage_this_month: {
+    resume_tailors: UsageBreakdown;
+    cover_letters: UsageBreakdown;
+    star_stories: UsageBreakdown;
+    job_analyses: UsageBreakdown;
+  };
   quotas: {
     resume_tailors_per_month: number;
+    resume_tailors_used: number;
     cover_letters_per_month: number;
+    cover_letters_used: number;
     star_stories_per_month: number;
+    star_stories_used: number;
     job_analyses_per_month: number;
+    job_analyses_used: number;
   };
 }
 
@@ -637,7 +654,7 @@ export interface AddFollowUpResponse {
 // Analytics Types
 export interface ApplicationMetrics {
   total_applications: number;
-  total_by_status: Record<JobApplicationStatus, number>;
+  total_by_status: Record<string, number>;
   success_rate: number; // Percentage of applications that led to offers
   average_days_to_decision: number;
   most_common_location: string;
