@@ -101,9 +101,13 @@ export default function DashboardPage() {
                 {getPlanLabel(usage.plan)}
               </div>
               <p className="text-gray-600 text-sm mt-4">
-                {usage.plan === "free"
-                  ? "Upgrade to unlock more features"
-                  : "Thanks for your subscription!"}
+                {usage.plan === "free" ? (
+                  <Link href="/subscribe" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
+                    Upgrade to unlock more features
+                  </Link>
+                ) : (
+                  "Thanks for your subscription!"
+                )}
               </p>
             </div>
 

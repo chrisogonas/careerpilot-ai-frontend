@@ -16,6 +16,7 @@ export default function ApplicationsPage() {
   const hasFetched = useRef(false);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!isAuthenticated) {
       router.push("/auth/login");
       return;
@@ -37,7 +38,7 @@ export default function ApplicationsPage() {
 
     loadApplications();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated]);
+  }, [isAuthenticated, isLoading]);
 
   const handleDelete = async (id: string) => {
     if (deleteConfirm !== id) {

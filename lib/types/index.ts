@@ -172,6 +172,9 @@ export interface UsageResponse {
     job_analyses_per_month: number;
     job_analyses_used: number;
   };
+  in_grace_period: boolean;
+  grace_period_end: string | null;
+  grace_period_days_remaining: number | null;
 }
 
 
@@ -288,7 +291,7 @@ export interface Subscription {
   id: string;
   user_id: string;
   plan: "free" | "pro" | "premium";
-  status: "active" | "trialing" | "past_due" | "canceled" | "unpaid";
+  status: "active" | "trialing" | "past_due" | "canceled" | "unpaid" | "grace_period";
   stripe_subscription_id?: string;
   stripe_customer_id?: string;
   current_period_start: string;
@@ -296,6 +299,9 @@ export interface Subscription {
   canceled_at?: string;
   ended_at?: string;
   billing_cycle: "monthly" | "yearly";
+  in_grace_period?: boolean;
+  grace_period_end?: string;
+  grace_period_days_remaining?: number;
   created_at: string;
   updated_at: string;
 }
@@ -405,6 +411,32 @@ export interface GetBillingHistoryResponse {
   has_more: boolean;
 }
 
+// Credit Pack Types (one-time purchase)
+export interface CreditPack {
+  id: string;
+  name: string;
+  credits: number;
+  price_cents: number;
+  price_usd: number;
+  description: string;
+  popular: boolean;
+}
+
+export interface GetCreditPacksResponse {
+  packs: CreditPack[];
+}
+
+export interface CreditPackCheckoutPayload {
+  pack_id: string;
+  success_url: string;
+  cancel_url: string;
+}
+
+export interface CreditPackCheckoutResponse {
+  session_id: string;
+  url: string;
+}
+
 // Resume Library Types
 export interface Resume {
   id: string;
@@ -511,13 +543,13 @@ export interface ResumeUploadPayload {
 }
 
 export interface ResumeUploadResponse {
-  resume_id: string;
+  resume_id?: string;
   filename: string;
   parsed: ParsedResumeData;
 }
 
 export interface ResumeFileUploadResponse {
-  resume_id: string;
+  resume_id?: string;
   filename: string;
   file_type: string;
   text_length: number;
@@ -553,6 +585,7 @@ export interface JobApplication {
   follow_up_date?: string;
   applied_resume_id?: string; // Which resume was used to apply
   applied_resume_title?: string; // Name of the resume used
+  applied_resume_text?: string; // Snapshot of resume content at time of linking
   tailor_id?: string; // ID if this came from tailor feature
   tags?: string[]; // Custom tags for organization
   follow_up_count: number;
@@ -585,6 +618,7 @@ export interface CreateApplicationPayload {
   job_type?: "full-time" | "part-time" | "contract" | "remote";
   applied_date?: string;
   tags?: string[];
+  applied_resume_text?: string;
 }
 
 export interface UpdateApplicationPayload {
@@ -727,10 +761,25 @@ export interface AnalyticsResponse {
   message: string;
 }
 
+// Contact Form Types
+export interface ContactFormPayload {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
+export interface ContactFormResponse {
+  success: boolean;
+  message: string;
+  submission_id?: string;
+}
+
 // API Error Response
 export interface ApiError {
-  error: string;
-  message: string;
+  error?: string;
+  message?: string;
+  detail?: string | { error?: string; message?: string };
   details?: string;
 }
 
@@ -761,6 +810,8 @@ export interface AuthContextType {
   updateSubscription: (newPlan: "free" | "pro" | "premium", billingCycle?: "monthly" | "yearly") => Promise<void>;
   cancelSubscription: (atPeriodEnd?: boolean) => Promise<void>;
   getBillingHistory: () => Promise<BillingEvent[]>;
+  getCreditPacks: () => Promise<CreditPack[]>;
+  createCreditPackCheckout: (packId: string, successUrl: string, cancelUrl: string) => Promise<string>;
   getResumes: () => Promise<Resume[]>;
   getResume: (id: string) => Promise<Resume>;
   createResume: (payload: CreateResumePayload) => Promise<Resume>;
@@ -771,10 +822,11 @@ export interface AuthContextType {
   uploadResume: (payload: ResumeUploadPayload) => Promise<ResumeUploadResponse>;
   uploadResumeFile: (file: File) => Promise<ResumeFileUploadResponse>;
   getApplications: () => Promise<JobApplication[]>;
-  getApplication: (id: string) => Promise<JobApplication>;
+  getApplication: (id: string) => Promise<GetApplicationResponse>;
   createApplication: (payload: CreateApplicationPayload) => Promise<JobApplication>;
   updateApplication: (id: string, payload: UpdateApplicationPayload) => Promise<JobApplication>;
   deleteApplication: (id: string) => Promise<void>;
   addFollowUp: (applicationId: string, payload: AddFollowUpPayload) => Promise<FollowUp>;
+  deleteFollowUp: (applicationId: string, followUpId: string) => Promise<void>;
   getAnalytics: () => Promise<UserAnalytics>;
 }

@@ -110,10 +110,11 @@ export default function Home() {
               name="Free"
               price="$0"
               features={[
-                "100 monthly credits",
+                "60 monthly credits",
                 "3 resumes",
                 "Basic resume tailoring",
                 "Basic job analysis",
+                "STAR story generation",
                 "Community support",
               ]}
               ctaLink="/auth/register"
@@ -128,6 +129,7 @@ export default function Home() {
                 "Cover letter generation",
                 "STAR story generation",
                 "Priority support",
+                "Save 20% with annual billing",
               ]}
               highlighted
               ctaLink="/subscribe"
@@ -143,15 +145,50 @@ export default function Home() {
                 "STAR story generation",
                 "Advanced analytics",
                 "Dedicated support",
+                "Save 20% with annual billing",
               ]}
               ctaLink="/subscribe"
             />
+          </div>
+
+          {/* Pay As You Go Credit Packs */}
+          <div className="mt-20">
+            <h3 className="text-3xl font-bold text-center text-gray-900 mb-4">
+              Or Buy Credits As You Go
+            </h3>
+            <p className="text-center text-gray-600 mb-10 text-lg">
+              Need extra credits? Purchase one-time credit packs — valid for 60 days.
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+              <CreditPackCard
+                credits={200}
+                price="$4.99"
+                perCredit="$0.025"
+              />
+              <CreditPackCard
+                credits={400}
+                price="$11.99"
+                perCredit="$0.030"
+                bestValue
+              />
+              <CreditPackCard
+                credits={700}
+                price="$19.99"
+                perCredit="$0.029"
+              />
+            </div>
+            <p className="text-center text-gray-500 mt-6 text-sm">
+              Purchased credits are valid for 60 days and work with any plan.{" "}
+              <Link href="/subscribe" className="text-blue-600 hover:underline">
+                Buy credits →
+              </Link>
+            </p>
           </div>
         </div>
       </div>
 
       {/* FAQ Section */}
-      <div className="bg-white py-20">
+      <div id="faq" className="bg-white py-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold text-center text-gray-900 mb-16">
             Frequently Asked Questions
@@ -170,16 +207,36 @@ export default function Home() {
               answer="Absolutely. All AI-generated content (resumes, cover letters, STAR stories) is fully editable. You can customize everything to match your voice and specific experience."
             />
             <FAQItem
-              question="How many tools can I use on the Free plan?"
-              answer="The Free plan includes 100 monthly credits with up to 3 resumes. Perfect for testing the platform."
+              question="How do credits work?"
+              answer="Credits are the currency for AI-powered features. Job analysis costs 1 credit, resume tailoring costs 2 credits, cover letter generation costs 2 credits, and STAR story generation costs 1 credit. Your remaining credits are calculated dynamically based on your total budget minus actual usage this month. Free plan users get 60 monthly credits; paid plans get their respective allotment plus any purchased credit packs."
+            />
+            <FAQItem
+              question="What can I do on the Free plan?"
+              answer="The Free plan includes 60 monthly credits, up to 3 resumes, resume tailoring, job analysis, and STAR story generation. It's perfect for testing the platform. Note: cover letter generation requires a Pro or Premium subscription. Important: free plan credits are only available if you have no active subscription or purchased credit packs."
+            />
+            <FAQItem
+              question="Which features require a paid subscription?"
+              answer="Cover letter generation is exclusive to Pro and Premium subscribers. All other features — resume tailoring, job analysis, and STAR story generation — are available on every plan including Free, as long as you have credits."
+            />
+            <FAQItem
+              question="What are credit packs?"
+              answer="Credit packs are one-time purchases (200, 400, or 700 credits) that add credits to your account instantly. Purchased credits are valid for 60 days and work alongside any subscription plan. If you buy another pack before your credits expire, the expiry window is extended. Note: if you are on the Free plan and purchase a credit pack, your free monthly credits are forfeited and only your purchased credits will be available."
+            />
+            <FAQItem
+              question="Do you offer annual billing?"
+              answer="Yes! Both Pro and Premium plans offer annual billing with a 20% discount. Pro annual is $7.99/month (billed $95.88/year) and Premium annual is $23.99/month (billed $287.88/year). You can switch between monthly and annual billing anytime."
+            />
+            <FAQItem
+              question="Can I cancel or change my plan anytime?"
+              answer="Absolutely. You can upgrade, downgrade, or cancel your plan at any time with no contracts or cancellation fees. Your access continues until the end of your current billing period."
             />
             <FAQItem
               question="Do you offer a refund if I'm not satisfied?"
-              answer="We're confident you'll love CareerPilot. If you have any issues, contact our support team and we'll make it right."
+              answer="Yes, we offer a 30-day money-back guarantee on all paid subscriptions. If you're not satisfied, contact our support team for a full refund."
             />
             <FAQItem
               question="Is my data secure?"
-              answer="Yes. We use industry-standard encryption and security practices to protect your resume and personal information. Your data is never shared with third parties."
+              answer="Yes. We use industry-standard encryption and security practices including two-factor authentication (2FA) to protect your resume and personal information. Your data is never shared with third parties."
             />
           </div>
         </div>
@@ -400,5 +457,34 @@ function ResourceCard({
         Learn more →
       </span>
     </Link>
+  );
+}
+
+function CreditPackCard({
+  credits,
+  price,
+  perCredit,
+  bestValue = false,
+}: {
+  credits: number;
+  price: string;
+  perCredit: string;
+  bestValue?: boolean;
+}) {
+  return (
+    <div className={`relative bg-white rounded-lg p-6 border-2 ${bestValue ? "border-green-500 shadow-lg" : "border-gray-200"}`}>
+      {bestValue && (
+        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-500 text-white text-xs font-bold px-3 py-1 rounded-full">
+          Best Value
+        </span>
+      )}
+      <div className="text-center">
+        <div className="text-3xl font-bold text-gray-900">{credits.toLocaleString()}</div>
+        <div className="text-gray-500 mb-4">credits</div>
+        <div className="text-3xl font-bold text-gray-900 mb-1">{price}</div>
+        <div className="text-sm text-gray-500 mb-4">{perCredit}/credit</div>
+        <div className="text-xs text-amber-600 font-semibold">Valid for 60 days</div>
+      </div>
+    </div>
   );
 }

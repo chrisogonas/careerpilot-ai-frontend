@@ -13,7 +13,7 @@ interface ResumeInputError {
 }
 
 export default function StarStoriesPage() {
-  const { user, isAuthenticated, getResumes, uploadResumeFile } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, getResumes, uploadResumeFile } = useAuth();
   const router = useRouter();
   const [resumeText, setResumeText] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -29,6 +29,7 @@ export default function StarStoriesPage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [resumeInputError, setResumeInputError] = useState<ResumeInputError | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
   const ALLOWED_FILE_TYPES = [".pdf", ".docx", ".txt"];
@@ -54,15 +55,20 @@ export default function StarStoriesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     router.push("/auth/login");
     return null;
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const validateAndSetFile = (file: File) => {
     setResumeInputError(null);
 
     // Validate file type
@@ -85,6 +91,20 @@ export default function StarStoriesPage() {
     }
 
     setUploadFile(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    validateAndSetFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) validateAndSetFile(file);
   };
 
   const handleUploadFile = async () => {
@@ -294,7 +314,17 @@ export default function StarStoriesPage() {
                       </p>
                     </div>
 
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
+                    <div
+                      className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                        isDragging
+                          ? "border-blue-500 bg-blue-50"
+                          : "border-gray-300 hover:border-blue-500"
+                      }`}
+                      onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                      onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                      onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                      onDrop={handleDrop}
+                    >
                       <input
                         type="file"
                         accept=".pdf,.docx,.txt"
@@ -303,9 +333,9 @@ export default function StarStoriesPage() {
                         id="resume-file-upload"
                       />
                       <label htmlFor="resume-file-upload" className="cursor-pointer block">
-                        <div className="text-4xl mb-3">📄</div>
+                        <div className="text-4xl mb-3">{isDragging ? "📥" : "📄"}</div>
                         <p className="font-medium text-gray-900">
-                          {uploadFile ? uploadFile.name : "Click to select file"}
+                          {isDragging ? "Drop your file here" : uploadFile ? uploadFile.name : "Click to select file"}
                         </p>
                         <p className="text-sm text-gray-600 mt-2">
                           or drag and drop your resume

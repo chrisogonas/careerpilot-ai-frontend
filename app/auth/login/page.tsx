@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 
@@ -12,6 +12,8 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const { login, requiresTwoFA } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const inactivityLogout = searchParams.get("reason") === "inactivity";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,6 +48,11 @@ export default function LoginPage() {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {inactivityLogout && (
+            <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded">
+              You were logged out due to 30 minutes of inactivity. Please sign in again.
+            </div>
+          )}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
               {error}

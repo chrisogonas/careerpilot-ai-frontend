@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics } from "@/lib/types";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, CreditPack, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics, GetApplicationResponse } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
+import { useInactivityTimeout } from "@/lib/hooks/useInactivityTimeout";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -31,6 +32,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [applications, setApplications] = useState<JobApplication[]>([]);
+  const [inactivityWarning, setInactivityWarning] = useState(false);
+
+  // --- Inactivity auto-logout (30 min) ---
+  const handleInactivityLogout = useCallback(async () => {
+    setInactivityWarning(false);
+    try {
+      await apiClient.logout();
+    } catch {
+      // best-effort
+    }
+    setUser(null);
+    localStorage.removeItem("careerpilot_token");
+    localStorage.removeItem("careerpilot_refresh_token");
+    // Redirect to login with a message
+    if (typeof window !== "undefined") {
+      window.location.href = "/auth/login?reason=inactivity";
+    }
+  }, []);
+
+  const handleInactivityWarning = useCallback(() => {
+    setInactivityWarning(true);
+  }, []);
+
+  const handleActivity = useCallback(() => {
+    if (inactivityWarning) setInactivityWarning(false);
+  }, [inactivityWarning]);
+
+  useInactivityTimeout({
+    onTimeout: handleInactivityLogout,
+    onWarning: handleInactivityWarning,
+    onActivity: handleActivity,
+    enabled: !!user,
+  });
 
   // Check if user is logged in on mount
   useEffect(() => {
@@ -38,14 +72,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const token = localStorage.getItem("careerpilot_token");
         if (token) {
-          // Verify token is still valid by trying to refresh
+          // First, try to validate the current access token via /auth/profile
           try {
-            const response = await apiClient.refreshToken();
-            setUser(authResponseToUser(response));
-          } catch (err) {
-            // Token is invalid, clear it
-            localStorage.removeItem("careerpilot_token");
-            setUser(null);
+            const profile = await apiClient.getMe();
+            setUser({
+              id: profile.user_id,
+              email: profile.email,
+              full_name: profile.full_name,
+              is_verified: "verified",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            });
+          } catch {
+            // Access token expired/invalid — try refreshing with refresh token
+            try {
+              const response = await apiClient.refreshToken();
+              setUser(authResponseToUser(response));
+            } catch {
+              // Both tokens invalid — clear everything and force re-login
+              localStorage.removeItem("careerpilot_token");
+              localStorage.removeItem("careerpilot_refresh_token");
+              setUser(null);
+            }
           }
         }
       } catch (err) {
@@ -339,6 +387,44 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const getCreditPacks = async (): Promise<CreditPack[]> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.getCreditPacks();
+      return response.packs;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch credit packs";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const createCreditPackCheckout = async (
+    packId: string,
+    successUrl: string,
+    cancelUrl: string
+  ): Promise<string> => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await apiClient.createCreditPackCheckout(
+        packId,
+        successUrl,
+        cancelUrl
+      );
+      return response.url;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create credit pack checkout";
+      setError(message);
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getResumes = async (): Promise<Resume[]> => {
     setIsLoading(true);
     setError(null);
@@ -495,7 +581,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const getApplication = async (id: string): Promise<JobApplication> => {
+  const getApplication = async (id: string): Promise<GetApplicationResponse> => {
     setIsLoading(true);
     setError(null);
     try {
@@ -578,6 +664,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const deleteFollowUp = async (applicationId: string, followUpId: string): Promise<void> => {
+    try {
+      await apiClient.deleteFollowUp(applicationId, followUpId);
+      // Update the application's follow_up_count
+      setApplications(applications.map(a => 
+        a.id === applicationId 
+          ? { ...a, follow_up_count: Math.max(0, a.follow_up_count - 1) }
+          : a
+      ));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete follow-up";
+      setError(message);
+      throw err;
+    }
+  };
+
   // Analytics Methods
   const getAnalytics = async (): Promise<UserAnalytics> => {
     setIsLoading(true);
@@ -616,6 +718,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (err) {
       setUser(null);
       localStorage.removeItem("careerpilot_token");
+      localStorage.removeItem("careerpilot_refresh_token");
       throw err;
     }
   };
@@ -646,6 +749,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateSubscription,
     cancelSubscription,
     getBillingHistory,
+    getCreditPacks,
+    createCreditPackCheckout,
     getResumes,
     getResume,
     createResume,
@@ -661,10 +766,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     updateApplication,
     deleteApplication,
     addFollowUp,
+    deleteFollowUp,
     getAnalytics,
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {/* Inactivity warning toast */}
+      {inactivityWarning && (
+        <div className="fixed bottom-6 right-6 z-[9999] max-w-sm animate-bounce">
+          <div className="bg-amber-50 border border-amber-300 shadow-lg rounded-lg p-4">
+            <p className="text-amber-900 font-semibold">Session expiring soon</p>
+            <p className="text-amber-700 text-sm mt-1">
+              You will be logged out in 2 minutes due to inactivity. Move your
+              mouse or press any key to stay logged in.
+            </p>
+          </div>
+        </div>
+      )}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth(): AuthContextType {

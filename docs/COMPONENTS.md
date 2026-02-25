@@ -336,6 +336,7 @@ export default function RootLayout({ children }) {
 - Monthly quota progress bars
 - Quick action cards
 - Plan/credit information
+- "Upgrade to unlock more features" link to plans page (free tier users)
 
 **Data Display:**
 ```

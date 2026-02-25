@@ -9,7 +9,7 @@ import { ProfileData } from "@/lib/types";
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, isAuthenticated, getSubscription, subscription, currentPlan } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, getSubscription, subscription, currentPlan } = useAuth();
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -17,6 +17,7 @@ export default function ProfilePage() {
   const hasFetched = useRef(false);
 
   useEffect(() => {
+    if (authLoading) return;
     if (!isAuthenticated) {
       router.push("/auth/login");
       return;
@@ -42,7 +43,7 @@ export default function ProfilePage() {
 
     fetchProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, authLoading, user]);
 
   // Update profile when subscription data is available
   useEffect(() => {

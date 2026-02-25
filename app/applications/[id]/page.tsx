@@ -1,23 +1,30 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
-import { JobApplication, FollowUp, UpdateApplicationPayload, AddFollowUpPayload, JobApplicationStatus } from "@/lib/types";
+import { JobApplication, FollowUp, UpdateApplicationPayload, AddFollowUpPayload, JobApplicationStatus, Resume } from "@/lib/types";
 
 function ApplicationDetailContent() {
   const router = useRouter();
   const params = useParams();
   const applicationId = params.id as string;
   
-  const { user, isAuthenticated, getApplication, updateApplication, addFollowUp, isLoading, error } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, getApplication, updateApplication, addFollowUp, deleteFollowUp, getResumes } = useAuth();
   const [application, setApplication] = useState<JobApplication | null>(null);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingFollowUp, setIsAddingFollowUp] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Local loading states to avoid sharing AuthContext's global isLoading
+  const [pageLoading, setPageLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [addingFollowUp, setAddingFollowUp] = useState(false);
+  const [deletingFollowUpId, setDeletingFollowUpId] = useState<string | null>(null);
+  const [savedResumes, setSavedResumes] = useState<Resume[]>([]);
 
   const [editData, setEditData] = useState<UpdateApplicationPayload>({});
   const [followUpData, setFollowUpData] = useState<AddFollowUpPayload>({
@@ -26,28 +33,55 @@ function ApplicationDetailContent() {
     status: "pending",
   });
 
+  // Use a ref for getApplication to avoid it being a useEffect dependency
+  const getApplicationRef = useRef(getApplication);
+  getApplicationRef.current = getApplication;
+  const hasFetchedRef = useRef(false);
+
   useEffect(() => {
+    if (authLoading) return;
     if (!isAuthenticated) {
       router.push("/auth/login");
       return;
     }
 
+    // Only fetch once — prevent re-fetching on every context re-render
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
     const loadApplication = async () => {
       try {
         setLocalError(null);
-        const data = await getApplication(applicationId);
-        setApplication(data);
-        // Mock follow-ups (backend would return these)
-        setFollowUps([]);
+        setPageLoading(true);
+        const data = await getApplicationRef.current(applicationId);
+        setApplication(data.application);
+        setFollowUps(data.follow_ups || []);
         setEditData({});
       } catch (err) {
         const message = err instanceof Error ? err.message : "Failed to load application";
         setLocalError(message);
+      } finally {
+        setPageLoading(false);
       }
     };
 
     loadApplication();
-  }, [isAuthenticated, router, applicationId, getApplication]);
+  }, [isAuthenticated, authLoading, router, applicationId]);
+
+  // Fetch saved resumes for the resume selector
+  useEffect(() => {
+    if (!isAuthenticated || authLoading) return;
+    const fetchResumes = async () => {
+      try {
+        const resumes = await getResumes();
+        setSavedResumes(resumes);
+      } catch (err) {
+        console.error("Failed to fetch resumes:", err);
+      }
+    };
+    fetchResumes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, authLoading]);
 
   const handleEditChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -61,9 +95,15 @@ function ApplicationDetailContent() {
     e.preventDefault();
     setSaveSuccess(false);
     setLocalError(null);
+    setSaving(true);
 
     try {
-      const updated = await updateApplication(applicationId, editData);
+      // Only include resume_id if user explicitly changed the dropdown
+      const payload = { ...editData };
+      if (payload.resume_id === "__unchanged__" || payload.resume_id === undefined) {
+        delete payload.resume_id;
+      }
+      const updated = await updateApplication(applicationId, payload);
       setApplication(updated);
       setIsEditing(false);
       setSaveSuccess(true);
@@ -71,6 +111,8 @@ function ApplicationDetailContent() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to save changes";
       setLocalError(message);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -91,6 +133,7 @@ function ApplicationDetailContent() {
       return;
     }
 
+    setAddingFollowUp(true);
     try {
       const newFollowUp = await addFollowUp(applicationId, followUpData);
       setFollowUps([newFollowUp, ...followUps]);
@@ -105,6 +148,30 @@ function ApplicationDetailContent() {
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add follow-up";
       setLocalError(message);
+    } finally {
+      setAddingFollowUp(false);
+    }
+  };
+
+  const handleDeleteFollowUp = async (followUpId: string) => {
+    if (!confirm("Are you sure you want to delete this follow-up?")) return;
+    setLocalError(null);
+    setDeletingFollowUpId(followUpId);
+
+    try {
+      await deleteFollowUp(applicationId, followUpId);
+      setFollowUps(followUps.filter(fu => fu.id !== followUpId));
+      if (application) {
+        setApplication({
+          ...application,
+          follow_up_count: Math.max(0, application.follow_up_count - 1),
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete follow-up";
+      setLocalError(message);
+    } finally {
+      setDeletingFollowUpId(null);
     }
   };
 
@@ -132,7 +199,7 @@ function ApplicationDetailContent() {
     withdrawn: "Withdrawn",
   };
 
-  if (isLoading && !application) {
+  if (pageLoading && !application) {
     return (
       <div className="min-h-screen bg-slate-50 py-8 px-4">
         <div className="max-w-4xl mx-auto">
@@ -166,9 +233,9 @@ function ApplicationDetailContent() {
         </Link>
 
         {/* Error/Success Messages */}
-        {(localError || error) && (
+        {localError && (
           <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {localError || error}
+            {localError}
           </div>
         )}
 
@@ -316,21 +383,39 @@ function ApplicationDetailContent() {
                     <label className="block text-sm font-semibold text-slate-900 mb-1">Notes</label>
                     <textarea
                       name="notes"
-                      value={editData.notes || application.notes || ""}
+                      value={editData.notes ?? application.notes ?? ""}
                       onChange={handleEditChange}
                       rows={4}
                       className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-900 mb-1">Linked Resume</label>
+                    <select
+                      name="resume_id"
+                      value={editData.resume_id ?? "__unchanged__"}
+                      onChange={handleEditChange}
+                      className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                    >
+                      <option value="__unchanged__">— Select resume to change —</option>
+                      <option value="">No resume linked</option>
+                      {savedResumes.map(r => (
+                        <option key={r.id} value={r.id}>
+                          {r.title || r.file_name || "Untitled Resume"}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 
                 <div className="flex gap-4 mt-6">
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={saving}
                     className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-2 px-4 rounded-lg transition"
                   >
-                    {isLoading ? "Saving..." : "Save Changes"}
+                    {saving ? "Saving..." : "Save Changes"}
                   </button>
                   <button
                     type="button"
@@ -342,6 +427,33 @@ function ApplicationDetailContent() {
                 </div>
               </form>
             )}
+
+            {/* Resume Used */}
+            <div className="bg-white rounded-lg shadow p-6 border border-slate-200">
+              <h2 className="text-2xl font-bold text-slate-900 mb-4">Resume Used</h2>
+              {application.applied_resume_title || application.applied_resume_text ? (
+                <div className="flex items-center gap-3 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <span className="text-2xl">📄</span>
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      {application.applied_resume_title || "Untitled Resume"}
+                    </p>
+                    {application.applied_resume_text && (
+                      <Link
+                        href={`/applications/${application.id}/resume`}
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        View Resume →
+                      </Link>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                  <p className="text-slate-500">None</p>
+                </div>
+              )}
+            </div>
 
             {/* Follow-ups Section */}
             <div className="bg-white rounded-lg shadow p-6 border border-slate-200">
@@ -405,10 +517,10 @@ function ApplicationDetailContent() {
                   <div className="flex gap-4 mt-4">
                     <button
                       type="submit"
-                      disabled={isLoading}
+                      disabled={addingFollowUp}
                       className="flex-1 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white font-semibold py-2 px-4 rounded-lg transition"
                     >
-                      {isLoading ? "Adding..." : "Add Follow-up"}
+                      {addingFollowUp ? "Adding..." : "Add Follow-up"}
                     </button>
                   </div>
                 </form>
@@ -419,18 +531,37 @@ function ApplicationDetailContent() {
                   {followUps.map(followUp => (
                     <div key={followUp.id} className="border border-slate-200 rounded-lg p-4 bg-slate-50">
                       <div className="flex justify-between items-start gap-4">
-                        <div>
+                        <div className="flex-1">
                           <p className="font-semibold text-slate-900 capitalize">{followUp.follow_up_type.replace("_", " ")}</p>
                           <p className="text-sm text-slate-600 mt-1">{new Date(followUp.created_at).toLocaleDateString()}</p>
                           <p className="text-slate-900 mt-2">{followUp.note}</p>
                         </div>
-                        <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
-                          followUp.status === "completed" 
-                            ? "bg-green-100 text-green-700" 
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}>
-                          {followUp.status.charAt(0).toUpperCase() + followUp.status.slice(1)}
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-1 rounded text-xs font-semibold whitespace-nowrap ${
+                            followUp.status === "completed" 
+                              ? "bg-green-100 text-green-700" 
+                              : "bg-yellow-100 text-yellow-700"
+                          }`}>
+                            {followUp.status.charAt(0).toUpperCase() + followUp.status.slice(1)}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteFollowUp(followUp.id)}
+                            disabled={deletingFollowUpId === followUp.id}
+                            className="p-1 text-slate-400 hover:text-red-600 transition"
+                            title="Delete follow-up"
+                          >
+                            {deletingFollowUpId === followUp.id ? (
+                              <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))}

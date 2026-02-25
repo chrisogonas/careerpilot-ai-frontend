@@ -18,6 +18,7 @@ function BillingContent() {
   const hasFetched = useRef(false);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user) {
       router.push("/auth/login");
       return;
@@ -41,7 +42,7 @@ function BillingContent() {
 
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, [user, isLoading]);
 
   const handleCancelSubscription = async () => {
     try {

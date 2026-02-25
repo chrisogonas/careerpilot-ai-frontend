@@ -45,6 +45,9 @@ import {
   GetBillingHistoryResponse,
   Plan,
   Subscription,
+  CreditPack,
+  GetCreditPacksResponse,
+  CreditPackCheckoutResponse,
   Resume,
   CreateResumePayload,
   CreateResumeResponse,
@@ -73,10 +76,13 @@ import {
   FollowUp,
   UserAnalytics,
   AnalyticsResponse,
+  ContactFormPayload,
+  ContactFormResponse,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
 const JWT_STORAGE_KEY = process.env.NEXT_PUBLIC_JWT_STORAGE_KEY || "careerpilot_token";
+const REFRESH_TOKEN_KEY = "careerpilot_refresh_token";
 
 class ApiClient {
   private baseURL: string;
@@ -100,10 +106,36 @@ class ApiClient {
     localStorage.removeItem(JWT_STORAGE_KEY);
   }
 
+  private getRefreshToken(): string | null {
+    if (typeof window === "undefined") return null;
+    return localStorage.getItem(REFRESH_TOKEN_KEY);
+  }
+
+  private setRefreshToken(token: string): void {
+    if (typeof window === "undefined") return;
+    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+  }
+
+  private removeRefreshToken(): void {
+    if (typeof window === "undefined") return;
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
+
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      const error: ApiError = await response.json();
-      throw new Error(error.message || "An error occurred");
+      let message = "An error occurred";
+      try {
+        const error = await response.json();
+        message =
+          error.message ||
+          (typeof error.detail === "string"
+            ? error.detail
+            : error.detail?.message) ||
+          message;
+      } catch {
+        // response body wasn't JSON
+      }
+      throw new Error(message);
     }
     return response.json();
   }
@@ -131,6 +163,7 @@ class ApiClient {
 
     const data = await this.handleResponse<AuthResponse>(response);
     this.setToken(data.access_token);
+    if (data.refresh_token) this.setRefreshToken(data.refresh_token);
     return data;
   }
 
@@ -143,6 +176,7 @@ class ApiClient {
 
     const data = await this.handleResponse<AuthResponse>(response);
     this.setToken(data.access_token);
+    if (data.refresh_token) this.setRefreshToken(data.refresh_token);
     return data;
   }
 
@@ -154,22 +188,30 @@ class ApiClient {
       });
     } finally {
       this.removeToken();
+      this.removeRefreshToken();
     }
   }
 
   async refreshToken(): Promise<AuthResponse> {
+    const refreshToken = this.getRefreshToken();
+    if (!refreshToken) {
+      throw new Error("No refresh token available");
+    }
+
     const response = await fetch(`${this.baseURL}/auth/refresh`, {
       method: "POST",
-      headers: this.getHeaders(),
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
     const data = await this.handleResponse<AuthResponse>(response);
     this.setToken(data.access_token);
+    if (data.refresh_token) this.setRefreshToken(data.refresh_token);
     return data;
   }
 
   async getMe(): Promise<AuthResponse> {
-    const response = await fetch(`${this.baseURL}/auth/me`, {
+    const response = await fetch(`${this.baseURL}/auth/profile`, {
       method: "GET",
       headers: this.getHeaders(),
     });
@@ -207,6 +249,9 @@ class ApiClient {
     const data = await this.handleResponse<TwoFALoginResponse>(response);
     if (data.access_token) {
       this.setToken(data.access_token);
+    }
+    if (data.refresh_token) {
+      this.setRefreshToken(data.refresh_token);
     }
     return data;
   }
@@ -252,7 +297,7 @@ class ApiClient {
 
   // Password Reset Endpoints
   async requestPasswordReset(payload: RequestPasswordResetPayload): Promise<RequestPasswordResetResponse> {
-    const response = await fetch(`${this.baseURL}/auth/request-password-reset`, {
+    const response = await fetch(`${this.baseURL}/auth/forgot-password`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(payload),
@@ -459,6 +504,37 @@ class ApiClient {
     return this.handleResponse<GetBillingHistoryResponse>(response);
   }
 
+  // Credit Pack Endpoints (one-time purchase)
+  async getCreditPacks(): Promise<GetCreditPacksResponse> {
+    const response = await fetch(`${this.baseURL}/stripe/credit-packs`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<GetCreditPacksResponse>(response);
+  }
+
+  async createCreditPackCheckout(
+    packId: string,
+    successUrl: string,
+    cancelUrl: string
+  ): Promise<CreditPackCheckoutResponse> {
+    const response = await fetch(
+      `${this.baseURL}/stripe/credit-packs/checkout`,
+      {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          pack_id: packId,
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+        }),
+      }
+    );
+
+    return this.handleResponse<CreditPackCheckoutResponse>(response);
+  }
+
   // Resume Library Endpoints
   async getResumes(): Promise<Resume[]> {
     const response = await fetch(`${this.baseURL}/resumes`, {
@@ -598,14 +674,14 @@ class ApiClient {
     return data.applications;
   }
 
-  async getApplication(id: string): Promise<JobApplication> {
+  async getApplication(id: string): Promise<GetApplicationResponse> {
     const response = await fetch(`${this.baseURL}/applications/${id}`, {
       method: "GET",
       headers: this.getHeaders(),
     });
 
     const data = await this.handleResponse<GetApplicationResponse>(response);
-    return data.application;
+    return data;
   }
 
   async createApplication(payload: CreateApplicationPayload): Promise<JobApplication> {
@@ -636,9 +712,10 @@ class ApiClient {
       body: JSON.stringify(payload),
     });
 
-    const data = await this.handleResponse<UpdateApplicationResponse>(response);
-    // Fetch the full application data after update
-    return this.getApplication(id);
+    await this.handleResponse<UpdateApplicationResponse>(response);
+    // Fetch the full application data after update and extract the application object
+    const fullData = await this.getApplication(id);
+    return fullData.application;
   }
 
   async deleteApplication(id: string): Promise<void> {
@@ -669,6 +746,15 @@ class ApiClient {
     };
   }
 
+  async deleteFollowUp(applicationId: string, followUpId: string): Promise<void> {
+    const response = await fetch(`${this.baseURL}/applications/${applicationId}/follow-ups/${followUpId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+
+    await this.handleResponse(response);
+  }
+
   // Analytics Methods
   async getAnalytics(): Promise<UserAnalytics> {
     const response = await fetch(`${this.baseURL}/analytics/me`, {
@@ -678,6 +764,17 @@ class ApiClient {
 
     const data = await this.handleResponse<AnalyticsResponse>(response);
     return data.analytics;
+  }
+
+  // Contact Form (public - no auth required)
+  async submitContactForm(payload: ContactFormPayload): Promise<ContactFormResponse> {
+    const response = await fetch(`${this.baseURL}/contact`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    return this.handleResponse<ContactFormResponse>(response);
   }
 }
 

@@ -94,6 +94,13 @@ export default function Navbar() {
                 >
                   🔐 Security
                 </Link>
+                <Link
+                  href="/contact"
+                  className="text-gray-700 hover:text-blue-600 transition-colors font-medium text-sm"
+                  title="Contact Us"
+                >
+                  ✉️ Contact
+                </Link>
                 <div className="flex items-center space-x-4">
                   <div className="flex flex-col">
                     <span className="text-sm font-medium text-gray-900">
@@ -124,6 +131,12 @@ export default function Navbar() {
                   className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
                 >
                   Pricing
+                </Link>
+                <Link
+                  href="/contact"
+                  className="text-gray-700 hover:text-blue-600 transition-colors font-medium"
+                >
+                  Contact
                 </Link>
                 <Link
                   href="/auth/login"

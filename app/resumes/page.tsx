@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
@@ -13,12 +13,17 @@ export default function ResumesPage() {
   const [isLoading2, setIsLoading2] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [settingDefaultId, setSettingDefaultId] = useState<string | null>(null);
+  const hasFetched = useRef(false);
 
   useEffect(() => {
+    if (isLoading) return;
     if (!user) {
       router.push("/auth/login");
       return;
     }
+
+    if (hasFetched.current) return;
+    hasFetched.current = true;
 
     const fetchResumes = async () => {
       try {
@@ -34,7 +39,7 @@ export default function ResumesPage() {
 
     fetchResumes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, router]);
+  }, [user, isLoading]);
 
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this resume?")) return;

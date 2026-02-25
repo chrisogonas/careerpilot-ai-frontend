@@ -13,7 +13,7 @@ interface ResumeInputError {
 }
 
 export default function TailorResumePage() {
-  const { user, isAuthenticated, getResumes, uploadResumeFile } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, getResumes } = useAuth();
   const router = useRouter();
   const [step, setStep] = useState<"input" | "result">("input");
   const [jobDescription, setJobDescription] = useState("");
@@ -24,13 +24,11 @@ export default function TailorResumePage() {
   const [error, setError] = useState("");
   const [result, setResult] = useState<TailorResponse | null>(null);
 
-  // Resume input method states
-  const [resumeInputMethod, setResumeInputMethod] = useState<"select" | "upload" | "paste">("select");
+  // Resume selection states
   const [savedResumes, setSavedResumes] = useState<Resume[]>([]);
   const [selectedResumeId, setSelectedResumeId] = useState("");
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [uploadingFile, setUploadingFile] = useState(false);
   const [resumeInputError, setResumeInputError] = useState<ResumeInputError | null>(null);
+  const [showResumeText, setShowResumeText] = useState(false);
 
   // Cover letter toggle
   const [generateCoverLetter, setGenerateCoverLetter] = useState(false);
@@ -44,8 +42,9 @@ export default function TailorResumePage() {
   const [starStoriesResult, setStarStoriesResult] = useState<string[] | null>(null);
   const [starStoriesLoading, setStarStoriesLoading] = useState(false);
 
-  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
-  const ALLOWED_FILE_TYPES = [".pdf", ".docx", ".txt"];
+  // Collapsible result sections
+  const [coverLetterExpanded, setCoverLetterExpanded] = useState(false);
+  const [starStoriesExpanded, setStarStoriesExpanded] = useState(false);
 
   // Fetch saved resumes on mount
   useEffect(() => {
@@ -68,64 +67,22 @@ export default function TailorResumePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated]);
 
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
     router.push("/auth/login");
     return null;
   }
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setResumeInputError(null);
-
-    // Validate file type
-    const fileExt = `.${file.name.split(".").pop()?.toLowerCase()}`;
-    if (!ALLOWED_FILE_TYPES.includes(fileExt)) {
-      setResumeInputError({
-        message: `Invalid file type. Accepted types: ${ALLOWED_FILE_TYPES.join(", ")}`,
-      });
-      setUploadFile(null);
-      return;
-    }
-
-    // Validate file size
-    if (file.size > MAX_FILE_SIZE) {
-      setResumeInputError({
-        message: `File size exceeds 5 MB limit. Your file is ${(file.size / 1024 / 1024).toFixed(2)} MB`,
-      });
-      setUploadFile(null);
-      return;
-    }
-
-    setUploadFile(file);
-  };
-
-  const handleUploadFile = async () => {
-    if (!uploadFile) {
-      setResumeInputError({ message: "Please select a file" });
-      return;
-    }
-
-    try {
-      setUploadingFile(true);
-      setResumeInputError(null);
-
-      const uploadResponse = await uploadResumeFile(uploadFile);
-      const extractedText = uploadResponse.parsed.experience_text;
-      setResumeText(extractedText);
-      setUploadFile(null);
-    } catch (err) {
-      console.error("Failed to upload file:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to upload file";
-      setResumeInputError({ message: errorMessage });
-    } finally {
-      setUploadingFile(false);
-    }
-  };
-
   const handleResumeSelect = (resumeId: string) => {
     setSelectedResumeId(resumeId);
+    setShowResumeText(false);
     const selectedResume = savedResumes.find((r) => r.id === resumeId);
     if (selectedResume) {
       setResumeText(selectedResume.content);
@@ -213,6 +170,8 @@ export default function TailorResumePage() {
     setStep("input");
     setJobDescription("");
     setResumeText("");
+    setSelectedResumeId("");
+    setShowResumeText(false);
     setTargetRole("");
     setTone("professional");
     setResult(null);
@@ -242,77 +201,11 @@ export default function TailorResumePage() {
         {step === "input" ? (
           <form onSubmit={handleTailor} className="bg-white rounded-lg shadow p-8">
             <div className="space-y-6">
-              {/* Job Description */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Job Description *
-                </label>
-                <textarea
-                  required
-                  value={jobDescription}
-                  onChange={(e) => setJobDescription(e.target.value)}
-                  placeholder="Paste the full job description here..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  rows={8}
-                />
-                <p className="text-gray-500 text-sm mt-1">
-                  The more detailed, the better the tailoring
-                </p>
-              </div>
-
-              {/* Resume Text - Multiple Input Methods */}
+              {/* Resume - Select from Saved Resumes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-4">
                   Your Resume *
                 </label>
-
-                {/* Resume Method Tabs */}
-                <div className="flex flex-wrap gap-2 mb-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResumeInputMethod("select");
-                      setResumeInputError(null);
-                      setUploadFile(null);
-                    }}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      resumeInputMethod === "select"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    📚 Select Saved
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResumeInputMethod("upload");
-                      setResumeInputError(null);
-                    }}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      resumeInputMethod === "upload"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    📤 Upload File
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setResumeInputMethod("paste");
-                      setResumeInputError(null);
-                      setUploadFile(null);
-                    }}
-                    className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                      resumeInputMethod === "paste"
-                        ? "bg-blue-500 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    📋 Paste Text
-                  </button>
-                </div>
 
                 {/* Error Message */}
                 {resumeInputError && (
@@ -321,128 +214,71 @@ export default function TailorResumePage() {
                   </div>
                 )}
 
-                {/* Select Saved Resume Method */}
-                {resumeInputMethod === "select" && (
-                  <div className="space-y-3">
-                    {savedResumes.length > 0 ? (
-                      <>
-                        <select
-                          value={selectedResumeId}
-                          onChange={(e) => handleResumeSelect(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        >
-                          <option value="">-- Select a resume --</option>
-                          {savedResumes.map((resume) => (
-                            <option key={resume.id} value={resume.id}>
-                              {resume.title} (v{resume.version} • {resume.content.length} chars)
-                            </option>
-                          ))}
-                        </select>
-                        {selectedResumeId && (
+                <div className="space-y-3">
+                  {savedResumes.length > 0 ? (
+                    <>
+                      <select
+                        value={selectedResumeId}
+                        onChange={(e) => handleResumeSelect(e.target.value)}
+                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      >
+                        <option value="">-- Select a resume --</option>
+                        {savedResumes.map((resume) => (
+                          <option key={resume.id} value={resume.id}>
+                            {resume.title} (v{resume.version} • {resume.content.length} chars)
+                          </option>
+                        ))}
+                      </select>
+                      {selectedResumeId && (() => {
+                        const selectedResume = savedResumes.find((r) => r.id === selectedResumeId);
+                        return selectedResume ? (
                           <>
                             <div className="p-4 rounded-lg border-2 border-blue-500 bg-blue-50">
-                              <div className="space-y-2">
-                                <h4 className="font-semibold text-gray-900">
-                                  {savedResumes.find((r) => r.id === selectedResumeId)?.title}
-                                </h4>
-                                <p className="text-sm text-gray-600">
-                                  Version {savedResumes.find((r) => r.id === selectedResumeId)?.version} • {resumeText.length} characters
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  Updated: {selectedResumeId && new Date(savedResumes.find((r) => r.id === selectedResumeId)?.updated_at || "").toLocaleDateString()}
-                                </p>
+                              <div className="flex items-start justify-between">
+                                <div className="space-y-2">
+                                  <h4 className="font-semibold text-gray-900">
+                                    {selectedResume.title}
+                                  </h4>
+                                  <p className="text-sm text-gray-600">
+                                    Version {selectedResume.version} • {resumeText.length} characters
+                                  </p>
+                                  <p className="text-xs text-gray-500">
+                                    Updated: {new Date(selectedResume.updated_at || "").toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setShowResumeText(!showResumeText)}
+                                  className="text-sm text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap ml-4"
+                                >
+                                  {showResumeText ? "Hide Text" : "View Text"}
+                                </button>
                               </div>
                             </div>
-                            <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-                              <p className="text-blue-800 text-sm">
-                                ✓ Selected resume loaded ({resumeText.length} characters)
-                              </p>
-                            </div>
+                            {showResumeText && (
+                              <textarea
+                                value={resumeText}
+                                readOnly
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-gray-700 focus:outline-none cursor-default"
+                                rows={8}
+                              />
+                            )}
                           </>
-                        )}
-                      </>
-                    ) : (
-                      <div className="p-4 bg-gray-50 border border-gray-200 rounded">
-                        <p className="text-gray-600">
-                          No saved resumes found.{" "}
-                          <a href="/resumes/new" className="text-blue-600 hover:underline">
-                            Upload a resume
-                          </a>{" "}
-                          first.
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Upload File Method */}
-                {resumeInputMethod === "upload" && (
-                  <div className="space-y-3">
-                    <div className="p-3 bg-blue-50 border border-blue-200 rounded">
-                      <p className="text-blue-800 text-sm">
-                        ℹ️ Supported formats: PDF, DOCX, TXT • Maximum size: 5 MB
+                        ) : null;
+                      })()}
+                    </>
+                  ) : (
+                    <div className="p-4 bg-gray-50 border border-gray-200 rounded">
+                      <p className="text-gray-600">
+                        No saved resumes found.{" "}
+                        <a href="/resumes/new" className="text-blue-600 hover:underline">
+                          Upload a resume
+                        </a>{" "}
+                        first.
                       </p>
                     </div>
-
-                    <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
-                      <input
-                        type="file"
-                        accept=".pdf,.docx,.txt"
-                        onChange={handleFileSelect}
-                        className="hidden"
-                        id="resume-file-upload"
-                      />
-                      <label htmlFor="resume-file-upload" className="cursor-pointer block">
-                        <div className="text-4xl mb-3">📄</div>
-                        <p className="font-medium text-gray-900">
-                          {uploadFile ? uploadFile.name : "Click to select file"}
-                        </p>
-                        <p className="text-sm text-gray-600 mt-2">
-                          or drag and drop your resume
-                        </p>
-                      </label>
-                    </div>
-
-                    {uploadFile && !uploadingFile && (
-                      <button
-                        type="button"
-                        onClick={handleUploadFile}
-                        className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
-                      >
-                        ✓ Extract & Load Resume
-                      </button>
-                    )}
-
-                    {uploadingFile && (
-                      <div className="w-full px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-center font-medium">
-                        <span className="inline-block animate-spin mr-2">⟳</span>
-                        Extracting text...
-                      </div>
-                    )}
-
-                    {resumeText && resumeInputMethod === "upload" && !uploadFile && (
-                      <div className="p-3 bg-green-50 border border-green-200 rounded">
-                        <p className="text-green-800 text-sm">
-                          ✓ Resume loaded ({resumeText.length} characters)
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Paste Text Method */}
-                {resumeInputMethod === "paste" && (
-                  <textarea
-                    value={resumeText}
-                    onChange={(e) => {
-                      setResumeText(e.target.value);
-                      setResumeInputError(null);
-                    }}
-                    placeholder="Paste your resume text here..."
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    rows={8}
-                  />
-                )}
+                  )}
+                </div>
 
                 <p className="text-gray-500 text-sm mt-2">
                   {resumeText.length} characters loaded
@@ -462,6 +298,24 @@ export default function TailorResumePage() {
                   placeholder="e.g., Senior Data Scientist"
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+              </div>
+
+              {/* Job Description */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Job Description *
+                </label>
+                <textarea
+                  required
+                  value={jobDescription}
+                  onChange={(e) => setJobDescription(e.target.value)}
+                  placeholder="Paste the full job description here..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={8}
+                />
+                <p className="text-gray-500 text-sm mt-1">
+                  The more detailed, the better the tailoring
+                </p>
               </div>
 
               {/* Tone */}
@@ -652,26 +506,42 @@ export default function TailorResumePage() {
                   )}
 
                   {coverLetterResult && !coverLetterLoading && (
-                    <div className="mt-8">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <span className="text-purple-600">✉️</span> Generated Cover Letter
-                      </h3>
-                      <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                        <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                          {coverLetterResult}
-                        </p>
-                      </div>
-                      <div className="mt-3">
-                        <button
-                          onClick={() => {
-                            navigator.clipboard.writeText(coverLetterResult);
-                            alert("Cover letter copied to clipboard!");
-                          }}
-                          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition"
+                    <div className="mt-8 border border-purple-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setCoverLetterExpanded(!coverLetterExpanded)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-purple-50 hover:bg-purple-100 transition cursor-pointer"
+                      >
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                          <span className="text-purple-600">✉️</span> Generated Cover Letter
+                        </h3>
+                        <svg
+                          className={`w-5 h-5 text-purple-600 transform transition-transform ${coverLetterExpanded ? "rotate-180" : ""}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          Copy Cover Letter
-                        </button>
-                      </div>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {coverLetterExpanded && (
+                        <div className="p-4 bg-purple-50">
+                          <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                            {coverLetterResult}
+                          </p>
+                          <div className="mt-3">
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(coverLetterResult);
+                                alert("Cover letter copied to clipboard!");
+                              }}
+                              className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition"
+                            >
+                              Copy Cover Letter
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -686,41 +556,85 @@ export default function TailorResumePage() {
                   )}
 
                   {starStoriesResult && !starStoriesLoading && (
-                    <div className="mt-8">
-                      <h3 className="text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2">
-                        <span className="text-green-600">⭐</span> STAR Interview Stories
-                      </h3>
-                      <div className="space-y-4">
-                        {starStoriesResult.map((story, idx) => (
-                          <div
-                            key={idx}
-                            className="bg-green-50 p-4 rounded-lg border border-green-200"
-                          >
-                            <p className="text-sm font-semibold text-green-700 mb-2">
-                              Story {idx + 1}
-                            </p>
-                            <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                              {story}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="mt-3">
-                        <button
-                          onClick={() => {
-                            const allStories = starStoriesResult
-                              .map((s, i) => `--- Story ${i + 1} ---\n${s}`)
-                              .join("\n\n");
-                            navigator.clipboard.writeText(allStories);
-                            alert("STAR stories copied to clipboard!");
-                          }}
-                          className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition"
+                    <div className="mt-8 border border-green-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setStarStoriesExpanded(!starStoriesExpanded)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-green-50 hover:bg-green-100 transition cursor-pointer"
+                      >
+                        <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                          <span className="text-green-600">⭐</span> STAR Interview Stories ({starStoriesResult.length})
+                        </h3>
+                        <svg
+                          className={`w-5 h-5 text-green-600 transform transition-transform ${starStoriesExpanded ? "rotate-180" : ""}`}
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
                         >
-                          Copy All STAR Stories
-                        </button>
-                      </div>
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </button>
+                      {starStoriesExpanded && (
+                        <div className="p-4 bg-green-50">
+                          <div className="space-y-4">
+                            {starStoriesResult.map((story, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-white p-4 rounded-lg border border-green-200"
+                              >
+                                <p className="text-sm font-semibold text-green-700 mb-2">
+                                  Story {idx + 1}
+                                </p>
+                                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                                  {story}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                          <div className="mt-3">
+                            <button
+                              onClick={() => {
+                                const allStories = starStoriesResult
+                                  .map((s, i) => `--- Story ${i + 1} ---\n${s}`)
+                                  .join("\n\n");
+                                navigator.clipboard.writeText(allStories);
+                                alert("STAR stories copied to clipboard!");
+                              }}
+                              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition"
+                            >
+                              Copy All STAR Stories
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
+
+                  {/* Add to Job Applications */}
+                  <div className="mt-8 pt-6 border-t border-gray-200">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        sessionStorage.setItem(
+                          "tailor_prefill",
+                          JSON.stringify({
+                            job_title: targetRole,
+                            company_name: companyName,
+                            job_description: jobDescription,
+                            resume_id: selectedResumeId,
+                            applied_resume_text: result.tailored_resume,
+                          })
+                        );
+                        window.open("/applications/new", "_blank");
+                      }}
+                      className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Add this to my job applications
+                    </button>
+                  </div>
                 </>
               )}
             </div>

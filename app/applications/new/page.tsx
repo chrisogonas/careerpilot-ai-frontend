@@ -1,16 +1,38 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
-import { CreateApplicationPayload, JobApplicationStatus } from "@/lib/types";
+import { CreateApplicationPayload, JobApplicationStatus, Resume } from "@/lib/types";
 
 export default function NewApplicationPage() {
+    // Prefill from tailor page if present
+    useEffect(() => {
+      if (typeof window === "undefined") return;
+      const prefill = sessionStorage.getItem("tailor_prefill");
+      if (prefill) {
+        try {
+          const data = JSON.parse(prefill);
+          setFormData(prev => ({
+            ...prev,
+            job_title: data.job_title || prev.job_title,
+            company_name: data.company_name || prev.company_name,
+            job_description: data.job_description || prev.job_description,
+            resume_id: data.resume_id || prev.resume_id,
+            applied_resume_text: data.applied_resume_text || prev.applied_resume_text,
+          }));
+          setSelectedResumeId(data.resume_id || "");
+        } catch {}
+        sessionStorage.removeItem("tailor_prefill");
+      }
+    }, []);
   const router = useRouter();
-  const { createApplication, isLoading, error } = useAuth();
+  const { createApplication, getResumes, isAuthenticated, isLoading, error } = useAuth();
   const [formError, setFormError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [savedResumes, setSavedResumes] = useState<Resume[]>([]);
+  const [selectedResumeId, setSelectedResumeId] = useState("");
 
   const [formData, setFormData] = useState<CreateApplicationPayload>({
     job_title: "",
@@ -26,6 +48,31 @@ export default function NewApplicationPage() {
   });
 
   const [tagInput, setTagInput] = useState("");
+
+  // Fetch saved resumes on mount
+  useEffect(() => {
+    const fetchResumes = async () => {
+      try {
+        const resumes = await getResumes();
+        setSavedResumes(resumes);
+      } catch (err) {
+        console.error("Failed to fetch resumes:", err);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchResumes();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated]);
+
+  const handleResumeSelect = (resumeId: string) => {
+    setSelectedResumeId(resumeId);
+    setFormData(prev => ({
+      ...prev,
+      resume_id: resumeId || undefined,
+    }));
+  };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -65,6 +112,14 @@ export default function NewApplicationPage() {
     if (!formData.company_name.trim()) {
       setFormError("Company name is required");
       return;
+    }
+    if (formData.job_url && formData.job_url.trim()) {
+      try {
+        new URL(formData.job_url.trim());
+      } catch {
+        setFormError("Please enter a valid URL (e.g., https://example.com/job)");
+        return;
+      }
     }
 
     try {
@@ -154,7 +209,7 @@ export default function NewApplicationPage() {
           <div className="mb-6">
             <label className="block text-sm font-semibold text-slate-900 mb-2">Job Posting URL</label>
             <input
-              type="url"
+              type="text"
               name="job_url"
               value={formData.job_url}
               onChange={handleInputChange}
@@ -273,7 +328,7 @@ export default function NewApplicationPage() {
           </div>
 
           {/* Notes */}
-          <div className="mb-8">
+          <div className="mb-6">
             <label className="block text-sm font-semibold text-slate-900 mb-2">Notes</label>
             <textarea
               name="notes"
@@ -283,6 +338,56 @@ export default function NewApplicationPage() {
               rows={4}
               className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
             />
+          </div>
+
+          {/* Resume Used */}
+          <div className="mb-8">
+            <label className="block text-sm font-semibold text-slate-900 mb-2">Resume Used</label>
+            <p className="text-sm text-slate-500 mb-3">Optionally link a resume you used for this application.</p>
+            {savedResumes.length > 0 ? (
+              <div className="space-y-3">
+                <select
+                  value={selectedResumeId}
+                  onChange={(e) => handleResumeSelect(e.target.value)}
+                  title="Select a resume used for this application"
+                  className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                >
+                  <option value="">-- None --</option>
+                  {savedResumes.map((resume) => (
+                    <option key={resume.id} value={resume.id}>
+                      {resume.title} (v{resume.version} • {resume.content.length} chars)
+                    </option>
+                  ))}
+                </select>
+                {selectedResumeId && (
+                  <div className="p-4 rounded-lg border-2 border-blue-500 bg-blue-50">
+                    <h4 className="font-semibold text-slate-900">
+                      {savedResumes.find((r) => r.id === selectedResumeId)?.title}
+                    </h4>
+                    <p className="text-sm text-slate-600 mt-1">
+                      Version {savedResumes.find((r) => r.id === selectedResumeId)?.version} •{" "}
+                      {savedResumes.find((r) => r.id === selectedResumeId)?.content.length} characters
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Updated:{" "}
+                      {new Date(
+                        savedResumes.find((r) => r.id === selectedResumeId)?.updated_at || ""
+                      ).toLocaleDateString()}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                <p className="text-slate-600 text-sm">
+                  No saved resumes found.{" "}
+                  <Link href="/resumes/new" className="text-blue-600 hover:underline">
+                    Upload a resume
+                  </Link>{" "}
+                  first.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Buttons */}

@@ -20,6 +20,7 @@ export default function NewResumePage() {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState<UploadError | null>(null);
   const [extractedText, setExtractedText] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
 
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
   const ALLOWED_FILE_TYPES = [".pdf", ".docx", ".txt"];
@@ -30,10 +31,7 @@ export default function NewResumePage() {
     }
   }, [user, isLoading, router]);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const validateAndSetFile = (file: File) => {
     setUploadError(null);
     setExtractedText(null);
 
@@ -57,6 +55,20 @@ export default function NewResumePage() {
     }
 
     setUploadFile(file);
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    validateAndSetFile(file);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) validateAndSetFile(file);
   };
 
   const handleUploadFile = async () => {
@@ -262,7 +274,17 @@ export default function NewResumePage() {
               </div>
 
               {/* File Input with Drag & Drop */}
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  isDragging
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-300 hover:border-blue-500"
+                }`}
+                onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                onDragEnter={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(true); }}
+                onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setIsDragging(false); }}
+                onDrop={handleDrop}
+              >
                 <input
                   type="file"
                   accept=".pdf,.docx,.txt"
@@ -271,9 +293,9 @@ export default function NewResumePage() {
                   id="file-upload"
                 />
                 <label htmlFor="file-upload" className="cursor-pointer block">
-                  <div className="text-4xl mb-3">📄</div>
+                  <div className="text-4xl mb-3">{isDragging ? "📥" : "📄"}</div>
                   <p className="font-medium text-gray-900">
-                    {uploadFile ? uploadFile.name : "Click to select file"}
+                    {isDragging ? "Drop your file here" : uploadFile ? uploadFile.name : "Click to select file"}
                   </p>
                   <p className="text-sm text-gray-600 mt-2">
                     or drag and drop your resume
