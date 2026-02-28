@@ -779,7 +779,7 @@ export default function TailorResumePage() {
                         {/* Tailored Resume Text (without CUSTOMIZATION EXPLANATION) */}
                         <div className="mb-4">
                           <div className="bg-white p-4 rounded-lg border border-blue-200">
-                            <p className="text-gray-700 whitespace-pre-wrap">
+                            <p className="text-gray-700 whitespace-pre-wrap text-sm">
                               {renderFormattedText(
                                 (() => {
                                   const text = result.tailored_resume;
@@ -891,7 +891,7 @@ export default function TailorResumePage() {
                             </button>
                             {extractedReqsExpanded && (
                               <div className="p-4 bg-blue-100/50">
-                                <p className="text-gray-700 whitespace-pre-wrap">
+                                <p className="text-gray-700 whitespace-pre-wrap text-sm">
                                   {renderFormattedText(result.extracted_requirements)}
                                 </p>
                               </div>
@@ -921,7 +921,7 @@ export default function TailorResumePage() {
                             </button>
                             {gapAnalysisExpanded && (
                               <div className="p-4 bg-amber-50/50">
-                                <p className="text-gray-700 whitespace-pre-wrap">
+                                <p className="text-gray-700 whitespace-pre-wrap text-sm">
                                   {renderFormattedText(result.gap_analysis)}
                                 </p>
                               </div>
@@ -951,7 +951,7 @@ export default function TailorResumePage() {
                             </button>
                             {customizationExpanded && (
                               <div className="p-4 bg-blue-100/50">
-                                <p className="text-gray-700 whitespace-pre-wrap">
+                                <p className="text-gray-700 whitespace-pre-wrap text-sm">
                                   {renderFormattedText(customizationText)}
                                 </p>
                               </div>
@@ -1184,7 +1184,7 @@ export default function TailorResumePage() {
                       </button>
                       {coverLetterExpanded && (
                         <div className="p-4 bg-purple-50">
-                          <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                          <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
                             {coverLetterResult}
                           </p>
                           <div className="mt-3">
@@ -1243,7 +1243,7 @@ export default function TailorResumePage() {
                                 <p className="text-sm font-semibold text-green-700 mb-2">
                                   Story {idx + 1}
                                 </p>
-                                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                                <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
                                   {renderFormattedText(story)}
                                 </p>
                               </div>
