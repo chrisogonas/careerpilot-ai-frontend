@@ -113,24 +113,28 @@ class ApiClient {
     }
 
     async extractJobFromURL(url: string): Promise<{ job_description: string; title?: string; company?: string }> {
-      const response = await this.fetchWithAuth(`${this.baseURL}/jobs/extract-from-url`, {
+      const response = await fetch(`${this.baseURL}/jobs/extract-from-url`, {
         method: "POST",
+        headers: this.getHeaders(),
         body: JSON.stringify({ url }),
       });
-      return response.json();
+      return this.handleResponse<{ job_description: string; title?: string; company?: string }>(response);
     }
 
     async getTailorHistory(): Promise<{ history: Array<{ id: string; tailored_text: string; extracted_requirements?: string; role_title?: string; company_name?: string; created_at: string }> }> {
-      const response = await this.fetchWithAuth(`${this.baseURL}/resumes/tailor-history`);
-      return response.json();
+      const response = await fetch(`${this.baseURL}/resumes/tailor-history`, {
+        headers: this.getHeaders(),
+      });
+      return this.handleResponse<{ history: Array<{ id: string; tailored_text: string; extracted_requirements?: string; role_title?: string; company_name?: string; created_at: string }> }>(response);
     }
 
     async editResumeSection(payload: { full_resume: string; section_name: string; instructions: string; job_description?: string }): Promise<{ updated_resume: string }> {
-      const response = await this.fetchWithAuth(`${this.baseURL}/resumes/edit-section`, {
+      const response = await fetch(`${this.baseURL}/resumes/edit-section`, {
         method: "POST",
+        headers: this.getHeaders(),
         body: JSON.stringify(payload),
       });
-      return response.json();
+      return this.handleResponse<{ updated_resume: string }>(response);
     }
   private baseURL: string;
 
