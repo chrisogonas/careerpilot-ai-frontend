@@ -432,7 +432,7 @@ class ApiClient {
   // Streaming Resume Tailoring
   async tailorResumeStream(
     payload: TailorRequestPayload,
-    onEvent: (event: { type: string; content?: string; message?: string; tailored_resume?: string; extracted_requirements?: string; ats_score?: any; job_id?: string; credits_remaining?: number }) => void,
+    onEvent: (event: { type: string; content?: string; message?: string; tailored_resume?: string; extracted_requirements?: string; gap_analysis?: string; ats_score?: any; job_id?: string; credits_remaining?: number }) => void,
   ): Promise<void> {
     const response = await fetch(`${this.baseURL}/resumes/tailor-stream`, {
       method: "POST",

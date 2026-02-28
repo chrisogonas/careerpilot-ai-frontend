@@ -60,11 +60,12 @@ export default function TailorResumePage() {
   const [starStoriesExpanded, setStarStoriesExpanded] = useState(false);
   const [extractedReqsExpanded, setExtractedReqsExpanded] = useState(false);
   const [customizationExpanded, setCustomizationExpanded] = useState(false);
+  const [gapAnalysisExpanded, setGapAnalysisExpanded] = useState(false);
   const [diffViewExpanded, setDiffViewExpanded] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [jobUrl, setJobUrl] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
-  const [tailorHistory, setTailorHistory] = useState<Array<{ id: string; tailored_text: string; role_title?: string; company_name?: string; created_at: string }>>([]);
+  const [tailorHistory, setTailorHistory] = useState<Array<{ id: string; tailored_text: string; extracted_requirements?: string; role_title?: string; company_name?: string; created_at: string }>>([]);
   const [historyExpanded, setHistoryExpanded] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [editingSection, setEditingSection] = useState<string | null>(null);
@@ -188,6 +189,7 @@ export default function TailorResumePage() {
                 credits_remaining: 0,
                 job_id: "",
                 ats_score: null,
+                gap_analysis: event.gap_analysis || "",
               };
               setResult(finalResult);
               setIsStreaming(false);
@@ -763,10 +765,15 @@ export default function TailorResumePage() {
                             <p className="text-gray-700 whitespace-pre-wrap">
                               {renderFormattedText(
                                 (() => {
-                                  const marker = result.tailored_resume.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
-                                  return marker !== -1
-                                    ? result.tailored_resume.substring(0, marker).trimEnd()
-                                    : result.tailored_resume;
+                                  const text = result.tailored_resume;
+                                  const markers = [
+                                    text.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/),
+                                    text.search(/\*{0,2}GAP ANALYSIS\*{0,2}/),
+                                  ].filter(m => m !== -1);
+                                  const earliest = markers.length ? Math.min(...markers) : -1;
+                                  return earliest !== -1
+                                    ? text.substring(0, earliest).trimEnd()
+                                    : text;
                                 })()
                               )}
                             </p>
@@ -781,8 +788,13 @@ export default function TailorResumePage() {
                           <div className="flex flex-wrap gap-1.5 mb-2">
                             {(() => {
                               const resumeText = (() => {
-                                const marker = result.tailored_resume.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
-                                return marker !== -1 ? result.tailored_resume.substring(0, marker).trimEnd() : result.tailored_resume;
+                                const text = result.tailored_resume;
+                                const markers = [
+                                  text.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/),
+                                  text.search(/\*{0,2}GAP ANALYSIS\*{0,2}/),
+                                ].filter(m => m !== -1);
+                                const earliest = markers.length ? Math.min(...markers) : -1;
+                                return earliest !== -1 ? text.substring(0, earliest).trimEnd() : text;
                               })();
                               const sections = [...resumeText.matchAll(/\*\*([A-Z][A-Z\s&\/\-]+)\*\*/g)].map(m => m[1].trim());
                               const unique = [...new Set(sections)];
@@ -844,10 +856,15 @@ export default function TailorResumePage() {
                         {(() => {
                           const marker = result.tailored_resume.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
                           if (marker === -1) return null;
-                          const customizationText = result.tailored_resume
+                          let customizationText = result.tailored_resume
                             .substring(marker)
                             .replace(/^\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}\s*/, "")
                             .trim();
+                          // Strip any trailing GAP ANALYSIS section from the customization text
+                          const gapMarker = customizationText.search(/\*{0,2}GAP ANALYSIS\*{0,2}/);
+                          if (gapMarker !== -1) {
+                            customizationText = customizationText.substring(0, gapMarker).trim();
+                          }
                           if (!customizationText) return null;
                           return (
                             <div className="mb-4 border border-blue-300 rounded-lg overflow-hidden">
@@ -903,6 +920,36 @@ export default function TailorResumePage() {
                               <div className="p-4 bg-blue-100/50">
                                 <p className="text-gray-700 whitespace-pre-wrap">
                                   {renderFormattedText(result.extracted_requirements)}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Gap Analysis - nested collapsible */}
+                        {result.gap_analysis && (
+                          <div className="mb-4 border border-amber-300 rounded-lg overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => setGapAnalysisExpanded(!gapAnalysisExpanded)}
+                              className="w-full flex items-center justify-between px-4 py-2.5 bg-amber-50 hover:bg-amber-100 transition cursor-pointer"
+                            >
+                              <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+                                <span className="text-amber-600">🔍</span> Gap Analysis
+                              </h4>
+                              <svg
+                                className={`w-4 h-4 text-amber-600 transform transition-transform ${gapAnalysisExpanded ? "rotate-180" : ""}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            {gapAnalysisExpanded && (
+                              <div className="p-4 bg-amber-50/50">
+                                <p className="text-gray-700 whitespace-pre-wrap">
+                                  {renderFormattedText(result.gap_analysis)}
                                 </p>
                               </div>
                             )}
@@ -1019,8 +1066,13 @@ export default function TailorResumePage() {
                               <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
                                 {renderFormattedText(
                                   (() => {
-                                    const marker = result.tailored_resume.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
-                                    return marker !== -1 ? result.tailored_resume.substring(0, marker).trimEnd() : result.tailored_resume;
+                                    const text = result.tailored_resume;
+                                    const markers = [
+                                      text.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/),
+                                      text.search(/\*{0,2}GAP ANALYSIS\*{0,2}/),
+                                    ].filter(m => m !== -1);
+                                    const earliest = markers.length ? Math.min(...markers) : -1;
+                                    return earliest !== -1 ? text.substring(0, earliest).trimEnd() : text;
                                   })()
                                 )}
                               </p>

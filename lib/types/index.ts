@@ -231,6 +231,7 @@ export interface TailorResponse {
   usage_id: string;
   job_id: string;
   ats_score?: ATSScore;
+  gap_analysis?: string;
 }
 
 // Job Analysis Types
