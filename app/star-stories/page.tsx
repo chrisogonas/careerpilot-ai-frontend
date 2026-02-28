@@ -2,11 +2,22 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, ReactNode } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
 import { Resume } from "@/lib/types";
+
+/** Convert markdown bold (**text**) to <strong> elements */
+function renderMarkdown(text: string): ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{part}</span>;
+  });
+}
 
 interface ResumeInputError {
   message: string;
@@ -458,9 +469,13 @@ export default function StarStoriesPage() {
                       Copy
                     </button>
                   </div>
-                  <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {story}
-                  </p>
+                  <div className="text-gray-700 whitespace-pre-wrap leading-relaxed">
+                    {story.split("\n").map((line, i) => (
+                      <p key={i} className={line.trim() === "" ? "h-3" : ""}>
+                        {renderMarkdown(line)}
+                      </p>
+                    ))}
+                  </div>
                 </div>
               ))}
             </div>
