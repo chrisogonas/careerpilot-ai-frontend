@@ -8,12 +8,23 @@ import { useRouter } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
 import { TailorResponse, Resume, CoverLetterResponse, StarStoryResponse } from "@/lib/types";
 
+interface SaveTailoredResponse {
+  message: string;
+  resume_id: string;
+}
+
 interface ResumeInputError {
   message: string;
 }
 
 export default function TailorResumePage() {
   const { user, isAuthenticated, isLoading: authLoading, getResumes } = useAuth();
+
+  // Save tailored resume states
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
   const router = useRouter();
   const [step, setStep] = useState<"input" | "result">("input");
   const [jobDescription, setJobDescription] = useState("");
@@ -33,6 +44,7 @@ export default function TailorResumePage() {
   // Cover letter toggle
   const [generateCoverLetter, setGenerateCoverLetter] = useState(false);
   const [companyName, setCompanyName] = useState("");
+  const [variationStyle, setVariationStyle] = useState<"balanced" | "skills-focused" | "experience-focused" | "concise">("balanced");
   const [coverLetterResult, setCoverLetterResult] = useState<string | null>(null);
   const [coverLetterLoading, setCoverLetterLoading] = useState(false);
 
@@ -43,8 +55,42 @@ export default function TailorResumePage() {
   const [starStoriesLoading, setStarStoriesLoading] = useState(false);
 
   // Collapsible result sections
+  const [resumeExpanded, setResumeExpanded] = useState(true);
   const [coverLetterExpanded, setCoverLetterExpanded] = useState(false);
   const [starStoriesExpanded, setStarStoriesExpanded] = useState(false);
+  const [extractedReqsExpanded, setExtractedReqsExpanded] = useState(false);
+  const [customizationExpanded, setCustomizationExpanded] = useState(false);
+  const [diffViewExpanded, setDiffViewExpanded] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
+  const [jobUrl, setJobUrl] = useState("");
+  const [urlLoading, setUrlLoading] = useState(false);
+  const [tailorHistory, setTailorHistory] = useState<Array<{ id: string; tailored_text: string; role_title?: string; company_name?: string; created_at: string }>>([]);
+  const [historyExpanded, setHistoryExpanded] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [editingSection, setEditingSection] = useState<string | null>(null);
+  const [sectionInstructions, setSectionInstructions] = useState("");
+  const [sectionEditLoading, setSectionEditLoading] = useState(false);
+  const [streamingText, setStreamingText] = useState("");
+  const [streamStatus, setStreamStatus] = useState("");
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  /**
+   * Render text with markdown-style **bold** converted to real <strong> tags.
+   * Splits on **...** patterns and alternates between plain text and bold spans.
+   */
+  const renderFormattedText = (text: string) => {
+    const parts = text.split(/(\*\*[^*]+\*\*)/);
+    return parts.map((part, i) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        return (
+          <strong key={i} className="font-bold">
+            {part.slice(2, -2)}
+          </strong>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
+  };
 
   // Fetch saved resumes on mount
   useEffect(() => {
@@ -100,25 +146,74 @@ export default function TailorResumePage() {
     }
 
     setLoading(true);
+    setIsStreaming(true);
+    setStreamingText("");
+    setStreamStatus("Initializing...");
+    setStep("result");
+    setResult(null);
 
     try {
       if (!user) throw new Error("User not found");
 
-      const response = await apiClient.tailorResume({
-        user_id: user.id,
-        resume_text: resumeText,
-        job_description: jobDescription,
-        options: {
-          target_role: targetRole,
-          tone,
-        },
-      });
+      let finalResult: any = null;
 
-      setResult(response);
-      setStep("result");
+      await apiClient.tailorResumeStream(
+        {
+          user_id: user.id,
+          resume_text: resumeText,
+          job_description: jobDescription,
+          options: {
+            target_role: targetRole,
+            tone,
+            company_name: companyName || undefined,
+            variation_style: variationStyle,
+          },
+        },
+        (event) => {
+          switch (event.type) {
+            case "status":
+              setStreamStatus(event.message || "");
+              break;
+            case "token":
+              setStreamingText((prev: string) => prev + (event.content || ""));
+              break;
+            case "replace":
+              setStreamingText(event.content || "");
+              break;
+            case "done":
+              finalResult = {
+                tailored_resume: event.tailored_resume || "",
+                extracted_requirements: event.extracted_requirements || "",
+                usage_id: "",
+                credits_remaining: 0,
+                job_id: "",
+                ats_score: null,
+              };
+              setResult(finalResult);
+              setIsStreaming(false);
+              setStreamStatus("");
+              break;
+            case "ats_score":
+              if (finalResult) {
+                finalResult = {
+                  ...finalResult,
+                  ats_score: event.ats_score,
+                  job_id: event.job_id || "",
+                  credits_remaining: event.credits_remaining || 0,
+                };
+                setResult({ ...finalResult });
+              }
+              break;
+            case "error":
+              setError(event.message || "Streaming failed");
+              setIsStreaming(false);
+              break;
+          }
+        }
+      );
 
       // Generate cover letter if toggled on
-      if (generateCoverLetter) {
+      if (generateCoverLetter && finalResult) {
         setCoverLetterLoading(true);
         try {
           const clResponse = await apiClient.generateCoverLetter({
@@ -127,6 +222,7 @@ export default function TailorResumePage() {
             job_description: jobDescription,
             company_name: companyName || "the company",
             role_title: targetRole,
+            tone: tone,
           });
           setCoverLetterResult(clResponse.cover_letter);
         } catch (clErr) {
@@ -138,7 +234,7 @@ export default function TailorResumePage() {
       }
 
       // Generate STAR stories if toggled on
-      if (generateStarStories) {
+      if (generateStarStories && finalResult) {
         setStarStoriesLoading(true);
         try {
           const starResponse = await apiClient.generateStarStories({
@@ -161,12 +257,38 @@ export default function TailorResumePage() {
           ? err.message
           : "Failed to tailor resume. Please try again."
       );
+      setIsStreaming(false);
     } finally {
       setLoading(false);
     }
   };
 
+  // Save tailored resume handler
+  const handleSaveTailoredResume = async () => {
+    if (!result || !user) return;
+    setSaveLoading(true);
+    setSaveError("");
+    setSaveMessage("");
+    try {
+      const payload = {
+        tailored_text: result.tailored_resume,
+        job_title: targetRole,
+      };
+      const resp: SaveTailoredResponse = await apiClient.saveTailoredResume(payload);
+      setSaveSuccess(true);
+      setSaveMessage(resp.message || "Resume saved successfully!");
+    } catch (err: any) {
+      setSaveError(err?.message || "Failed to save tailored resume.");
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
   const handleReset = () => {
+    setSaveLoading(false);
+    setSaveSuccess(false);
+    setSaveError("");
+    setSaveMessage("");
     setStep("input");
     setJobDescription("");
     setResumeText("");
@@ -180,6 +302,16 @@ export default function TailorResumePage() {
     setStarStoriesResult(null);
     setStarStoriesLoading(false);
     setError("");
+    setDiffViewExpanded(false);
+    setPdfLoading(false);
+    setJobUrl("");
+    setUrlLoading(false);
+    setVariationStyle("balanced");
+    setEditingSection(null);
+    setSectionInstructions("");
+    setStreamingText("");
+    setStreamStatus("");
+    setIsStreaming(false);
   };
 
   return (
@@ -300,6 +432,91 @@ export default function TailorResumePage() {
                 />
               </div>
 
+              {/* Company Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Company Name (optional)
+                </label>
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="e.g., Acme Corporation"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+
+              {/* Resume Variation Style */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Resume Style
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {([
+                    { value: "balanced", label: "Balanced", icon: "⚖️" },
+                    { value: "skills-focused", label: "Skills-First", icon: "🛠️" },
+                    { value: "experience-focused", label: "Experience-First", icon: "💼" },
+                    { value: "concise", label: "Concise", icon: "📄" },
+                  ] as const).map((style) => (
+                    <button
+                      key={style.value}
+                      type="button"
+                      onClick={() => setVariationStyle(style.value as any)}
+                      className={`p-2 rounded-lg border text-sm font-medium transition ${
+                        variationStyle === style.value
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-gray-200 hover:border-gray-300 text-gray-600"
+                      }`}
+                    >
+                      <span className="block text-lg mb-1">{style.icon}</span>
+                      {style.label}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-gray-500 text-xs mt-1">Choose how the tailored resume should be structured</p>
+              </div>
+
+              {/* Job URL Auto-Extract */}
+              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg p-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Or paste a job posting URL
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={jobUrl}
+                    onChange={(e) => setJobUrl(e.target.value)}
+                    placeholder="https://www.linkedin.com/jobs/view/..."
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!jobUrl.trim()) return;
+                      try {
+                        setUrlLoading(true);
+                        const result = await apiClient.extractJobFromURL(jobUrl.trim());
+                        setJobDescription(result.job_description);
+                        if (result.company) setCompanyName(result.company);
+                        if (result.title) setTargetRole(result.title);
+                      } catch (err: any) {
+                        alert(err.message || "Failed to extract job description");
+                      } finally {
+                        setUrlLoading(false);
+                      }
+                    }}
+                    disabled={urlLoading || !jobUrl.trim()}
+                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium transition disabled:opacity-60 text-sm whitespace-nowrap"
+                  >
+                    {urlLoading ? "Extracting..." : "Extract JD"}
+                  </button>
+                </div>
+                <p className="text-gray-500 text-xs mt-1">
+                  Supports LinkedIn, Indeed, Glassdoor, and most job boards
+                </p>
+              </div>
+
               {/* Job Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -316,34 +533,6 @@ export default function TailorResumePage() {
                 <p className="text-gray-500 text-sm mt-1">
                   The more detailed, the better the tailoring
                 </p>
-              </div>
-
-              {/* Tone */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Writing Tone
-                </label>
-                <div className="space-y-2">
-                  {(["professional", "conversational", "concise"] as const).map(
-                    (t) => (
-                      <label key={t} className="flex items-center">
-                        <input
-                          type="radio"
-                          name="tone"
-                          value={t}
-                          checked={tone === t}
-                          onChange={(e) =>
-                            setTone(e.target.value as typeof tone)
-                          }
-                          className="h-4 w-4 text-blue-600"
-                        />
-                        <span className="ml-2 text-gray-700 capitalize">
-                          {t}
-                        </span>
-                      </label>
-                    )
-                  )}
-                </div>
               </div>
 
               {/* Cover Letter Toggle */}
@@ -367,16 +556,30 @@ export default function TailorResumePage() {
 
                 {generateCoverLetter && (
                   <div className="mt-4 ml-8">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Company Name (optional)
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Writing Tone
                     </label>
-                    <input
-                      type="text"
-                      value={companyName}
-                      onChange={(e) => setCompanyName(e.target.value)}
-                      placeholder="e.g., Acme Corporation"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
+                    <div className="space-y-2">
+                      {(["professional", "conversational", "concise"] as const).map(
+                        (t) => (
+                          <label key={t} className="flex items-center">
+                            <input
+                              type="radio"
+                              name="tone"
+                              value={t}
+                              checked={tone === t}
+                              onChange={(e) =>
+                                setTone(e.target.value as typeof tone)
+                              }
+                              className="h-4 w-4 text-purple-600"
+                            />
+                            <span className="ml-2 text-gray-700 capitalize">
+                              {t}
+                            </span>
+                          </label>
+                        )
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -455,44 +658,444 @@ export default function TailorResumePage() {
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 Tailored Resume
               </h2>
-              {result && (
-                <>
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Extracted Requirements
-                    </h3>
-                    <p className="text-gray-700 whitespace-pre-wrap">
-                      {result.extracted_requirements}
-                    </p>
+              {/* Streaming Progress Display */}
+              {isStreaming && (
+                <div className="mb-6">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                    <span className="text-sm font-medium text-blue-700">{streamStatus}</span>
                   </div>
-
-                  <div className="mb-6">
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                      Your Tailored Resume
-                    </h3>
-                    <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                      <p className="text-gray-700 whitespace-pre-wrap">
-                        {result.tailored_resume}
+                  {streamingText && (
+                    <div className="bg-white p-4 rounded-lg border border-blue-200 max-h-96 overflow-y-auto">
+                      <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                        {renderFormattedText(streamingText)}
+                        <span className="inline-block w-2 h-4 bg-blue-600 animate-pulse ml-0.5"></span>
                       </p>
                     </div>
+                  )}
+                </div>
+              )}
+              {/* ATS Match Score Badge */}
+              {result?.ats_score && (
+                <div className="mb-6 p-4 rounded-lg border-2 border-indigo-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-lg font-semibold text-indigo-900 flex items-center gap-2">
+                      <span>🎯</span> ATS Match Score
+                    </h3>
+                    <div className={`text-3xl font-bold ${
+                      result.ats_score.score >= 80 ? "text-green-600" :
+                      result.ats_score.score >= 60 ? "text-yellow-600" :
+                      "text-red-600"
+                    }`}>
+                      {result.ats_score.score}%
+                    </div>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-3 mb-3">
+                    <div
+                      className={`h-3 rounded-full transition-all ${
+                        result.ats_score.score >= 80 ? "bg-green-500" :
+                        result.ats_score.score >= 60 ? "bg-yellow-500" :
+                        "bg-red-500"
+                      }`}
+                      style={{ width: `${result.ats_score.score}%` }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    {result.ats_score.matched.length > 0 && (
+                      <div>
+                        <p className="font-medium text-green-700 mb-1">✅ Matched Keywords:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.ats_score.matched.map((kw: string, i: number) => (
+                            <span key={i} className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs">
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {result.ats_score.missing.length > 0 && (
+                      <div>
+                        <p className="font-medium text-red-700 mb-1">❌ Missing Keywords:</p>
+                        <div className="flex flex-wrap gap-1">
+                          {result.ats_score.missing.map((kw: string, i: number) => (
+                            <span key={i} className="px-2 py-0.5 bg-red-100 text-red-800 rounded-full text-xs">
+                              {kw}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  {result.ats_score.suggestions && (
+                    <div className="mt-3 text-sm text-indigo-700">
+                      <p className="font-medium mb-1">💡 Suggestions:</p>
+                      <p className="whitespace-pre-wrap">{result.ats_score.suggestions}</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              {result && (
+                <>
+                  {/* Tailored Resume Section - collapsible, expanded by default */}
+                  <div className="mb-6 border border-blue-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setResumeExpanded(!resumeExpanded)}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 hover:bg-blue-100 transition cursor-pointer"
+                    >
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <span className="text-blue-600">📄</span> Your Tailored Resume
+                      </h3>
+                      <svg
+                        className={`w-5 h-5 text-blue-600 transform transition-transform ${resumeExpanded ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {resumeExpanded && (
+                      <div className="p-4 bg-blue-50">
+                        {/* Tailored Resume Text (without CUSTOMIZATION EXPLANATION) */}
+                        <div className="mb-4">
+                          <div className="bg-white p-4 rounded-lg border border-blue-200">
+                            <p className="text-gray-700 whitespace-pre-wrap">
+                              {renderFormattedText(
+                                (() => {
+                                  const marker = result.tailored_resume.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
+                                  return marker !== -1
+                                    ? result.tailored_resume.substring(0, marker).trimEnd()
+                                    : result.tailored_resume;
+                                })()
+                              )}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Section-level Editing */}
+                        <div className="mt-3 p-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-200">
+                          <h4 className="text-sm font-semibold text-emerald-800 mb-2 flex items-center gap-1">
+                            ✏️ Edit a Section
+                          </h4>
+                          <div className="flex flex-wrap gap-1.5 mb-2">
+                            {(() => {
+                              const resumeText = (() => {
+                                const marker = result.tailored_resume.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
+                                return marker !== -1 ? result.tailored_resume.substring(0, marker).trimEnd() : result.tailored_resume;
+                              })();
+                              const sections = [...resumeText.matchAll(/\*\*([A-Z][A-Z\s&\/\-]+)\*\*/g)].map(m => m[1].trim());
+                              const unique = [...new Set(sections)];
+                              return unique.map((s) => (
+                                <button
+                                  key={s}
+                                  onClick={() => { setEditingSection(editingSection === s ? null : s); setSectionInstructions(""); }}
+                                  className={editingSection === s
+                                    ? "px-2.5 py-1 text-xs rounded-full font-medium transition bg-emerald-600 text-white"
+                                    : "px-2.5 py-1 text-xs rounded-full font-medium transition bg-white text-emerald-700 border border-emerald-300 hover:bg-emerald-100"
+                                  }
+                                >
+                                  {s}
+                                </button>
+                              ));
+                            })()}
+                          </div>
+                          {editingSection && (
+                            <div className="mt-2">
+                              <label className="text-xs text-emerald-700 font-medium">
+                                Instructions for &ldquo;{editingSection}&rdquo;:
+                              </label>
+                              <textarea
+                                value={sectionInstructions}
+                                onChange={(e) => setSectionInstructions(e.target.value)}
+                                placeholder='e.g. "Make it more concise" or "Add more quantified achievements"'
+                                className="w-full mt-1 p-2 text-sm border border-emerald-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 resize-none"
+                                rows={2}
+                              />
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    setSectionEditLoading(true);
+                                    const resp = await apiClient.editResumeSection({
+                                      full_resume: result.tailored_resume,
+                                      section_name: editingSection,
+                                      instructions: sectionInstructions,
+                                      job_description: jobDescription,
+                                    });
+                                    setResult({ ...result, tailored_resume: resp.updated_resume });
+                                    setEditingSection(null);
+                                    setSectionInstructions("");
+                                  } catch (err: any) {
+                                    alert(err.message || "Section edit failed");
+                                  } finally {
+                                    setSectionEditLoading(false);
+                                  }
+                                }}
+                                disabled={sectionEditLoading || !sectionInstructions.trim()}
+                                className="mt-2 w-full bg-emerald-600 hover:bg-emerald-700 text-white py-1.5 rounded-lg text-sm font-medium transition disabled:opacity-50"
+                              >
+                                {sectionEditLoading ? "Regenerating..." : "Regenerate Section"}
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Customization Explanation - nested collapsible */}
+                        {(() => {
+                          const marker = result.tailored_resume.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
+                          if (marker === -1) return null;
+                          const customizationText = result.tailored_resume
+                            .substring(marker)
+                            .replace(/^\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}\s*/, "")
+                            .trim();
+                          if (!customizationText) return null;
+                          return (
+                            <div className="mb-4 border border-blue-300 rounded-lg overflow-hidden">
+                              <button
+                                type="button"
+                                onClick={() => setCustomizationExpanded(!customizationExpanded)}
+                                className="w-full flex items-center justify-between px-4 py-2.5 bg-blue-100 hover:bg-blue-200 transition cursor-pointer"
+                              >
+                                <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+                                  <span className="text-blue-600">💡</span> Explaining your Resume Customization
+                                </h4>
+                                <svg
+                                  className={`w-4 h-4 text-blue-600 transform transition-transform ${customizationExpanded ? "rotate-180" : ""}`}
+                                  fill="none"
+                                  stroke="currentColor"
+                                  viewBox="0 0 24 24"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                                </svg>
+                              </button>
+                              {customizationExpanded && (
+                                <div className="p-4 bg-blue-100/50">
+                                  <p className="text-gray-700 whitespace-pre-wrap">
+                                    {renderFormattedText(customizationText)}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* Extracted Requirements - nested collapsible */}
+                        {result.extracted_requirements && (
+                          <div className="mb-4 border border-blue-300 rounded-lg overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => setExtractedReqsExpanded(!extractedReqsExpanded)}
+                              className="w-full flex items-center justify-between px-4 py-2.5 bg-blue-100 hover:bg-blue-200 transition cursor-pointer"
+                            >
+                              <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+                                <span className="text-blue-600">📋</span> Extracted Requirements
+                              </h4>
+                              <svg
+                                className={`w-4 h-4 text-blue-600 transform transition-transform ${extractedReqsExpanded ? "rotate-180" : ""}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            {extractedReqsExpanded && (
+                              <div className="p-4 bg-blue-100/50">
+                                <p className="text-gray-700 whitespace-pre-wrap">
+                                  {renderFormattedText(result.extracted_requirements)}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Save tailored resume button and feedback */}
+                        <div className="flex flex-col gap-2 mb-4">
+                          <button
+                            onClick={handleSaveTailoredResume}
+                            disabled={saveLoading || saveSuccess}
+                            className={`w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium transition ${saveLoading || saveSuccess ? "opacity-60 cursor-not-allowed" : ""}`}
+                          >
+                            {saveLoading
+                              ? "Saving..."
+                              : saveSuccess
+                              ? "Resume Saved"
+                              : "Save my Tailored Resume"}
+                          </button>
+                          {saveMessage && (
+                            <div className="text-green-700 bg-green-50 border border-green-200 rounded px-3 py-2 text-sm">{saveMessage}</div>
+                          )}
+                          {saveError && (
+                            <div className="text-red-700 bg-red-50 border border-red-200 rounded px-3 py-2 text-sm">{saveError}</div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(result.tailored_resume);
+                            alert("Resume copied to clipboard!");
+                          }}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition"
+                        >
+                          Copy Resume
+                        </button>
+
+                        <button
+                          onClick={async () => {
+                            try {
+                              setPdfLoading(true);
+                              const blob = await apiClient.exportResumePDF({
+                                resume_text: result.tailored_resume,
+                                title: targetRole || "Tailored Resume",
+                              });
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a");
+                              a.href = url;
+                              a.download = `${targetRole || "tailored-resume"}.pdf`;
+                              document.body.appendChild(a);
+                              a.click();
+                              document.body.removeChild(a);
+                              URL.revokeObjectURL(url);
+                            } catch (err: any) {
+                              alert(err.message || "PDF export failed");
+                            } finally {
+                              setPdfLoading(false);
+                            }
+                          }}
+                          disabled={pdfLoading}
+                          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition disabled:opacity-60"
+                        >
+                          {pdfLoading ? "Generating PDF..." : "Download as PDF"}
+                        </button>
+                      </div>
+                    )}
                   </div>
 
-                  <div className="flex gap-4">
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(result.tailored_resume);
-                        alert("Resume copied to clipboard!");
-                      }}
-                      className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition"
-                    >
-                      Copy Resume
-                    </button>
+                  <div className="flex gap-4 mb-4">
                     <button
                       onClick={handleReset}
                       className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition"
                     >
                       Tailor Another Resume
                     </button>
+                  </div>
+
+
+                  {/* Side-by-Side Diff View */}
+                  <div className="mb-6 border border-amber-200 rounded-lg overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setDiffViewExpanded(!diffViewExpanded)}
+                      className="w-full flex items-center justify-between px-4 py-3 bg-amber-50 hover:bg-amber-100 transition cursor-pointer"
+                    >
+                      <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                        <span className="text-amber-600">🔍</span> Compare with Original
+                      </h3>
+                      <svg
+                        className={`w-5 h-5 text-amber-600 transform transition-transform ${diffViewExpanded ? "rotate-180" : ""}`}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                    {diffViewExpanded && (
+                      <div className="p-4 bg-amber-50">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-1">
+                              <span className="text-red-500">◀</span> Original Resume
+                            </h4>
+                            <div className="bg-red-50 border border-red-200 rounded-lg p-3 max-h-96 overflow-y-auto">
+                              <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">{resumeText}</p>
+                            </div>
+                          </div>
+                          <div>
+                            <h4 className="font-semibold text-gray-800 mb-2 flex items-center gap-1">
+                              <span className="text-green-500">▶</span> Tailored Resume
+                            </h4>
+                            <div className="bg-green-50 border border-green-200 rounded-lg p-3 max-h-96 overflow-y-auto">
+                              <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                                {renderFormattedText(
+                                  (() => {
+                                    const marker = result.tailored_resume.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
+                                    return marker !== -1 ? result.tailored_resume.substring(0, marker).trimEnd() : result.tailored_resume;
+                                  })()
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Tailoring History */}
+                  <div className="bg-gradient-to-r from-slate-50 to-gray-50 border border-gray-200 rounded-xl overflow-hidden">
+                    <button
+                      onClick={async () => {
+                        if (!historyExpanded && tailorHistory.length === 0) {
+                          try {
+                            setHistoryLoading(true);
+                            const data = await apiClient.getTailorHistory();
+                            setTailorHistory(data.history || []);
+                          } catch (err) {
+                            console.error("Failed to load history:", err);
+                          } finally {
+                            setHistoryLoading(false);
+                          }
+                        }
+                        setHistoryExpanded(!historyExpanded);
+                      }}
+                      className="w-full flex items-center justify-between p-4 text-left hover:bg-gray-100 transition"
+                    >
+                      <span className="font-medium text-gray-700">📋 Tailoring History</span>
+                      <span className="text-gray-400">{historyExpanded ? "▲" : "▼"}</span>
+                    </button>
+                    {historyExpanded && (
+                      <div className="p-4 pt-0 space-y-3 max-h-96 overflow-y-auto">
+                        {historyLoading ? (
+                          <p className="text-gray-500 text-sm">Loading history...</p>
+                        ) : tailorHistory.length === 0 ? (
+                          <p className="text-gray-500 text-sm">No tailoring history yet.</p>
+                        ) : (
+                          tailorHistory.map((item) => (
+                            <div
+                              key={item.id}
+                              className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-sm transition cursor-pointer"
+                              onClick={() => {
+                                setResult({
+                                  tailored_resume: item.tailored_text,
+                                  extracted_requirements: item.extracted_requirements || "",
+                                  usage_id: "",
+                                  credits_remaining: 0,
+                                  job_id: "",
+                                } as any);
+                                setStep("result");
+                              }}
+                            >
+                              <div className="flex justify-between items-center">
+                                <div>
+                                  <span className="font-medium text-gray-800 text-sm">
+                                    {item.role_title || "Untitled Role"}
+                                  </span>
+                                  {item.company_name && (
+                                    <span className="text-gray-500 text-sm ml-2">at {item.company_name}</span>
+                                  )}
+                                </div>
+                                <span className="text-gray-400 text-xs">
+                                  {new Date(item.created_at).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <p className="text-gray-500 text-xs mt-1 truncate">
+                                {item.tailored_text.substring(0, 100)}...
+                              </p>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Cover Letter Result */}

@@ -85,6 +85,53 @@ const JWT_STORAGE_KEY = process.env.NEXT_PUBLIC_JWT_STORAGE_KEY || "careerpilot_
 const REFRESH_TOKEN_KEY = "careerpilot_refresh_token";
 
 class ApiClient {
+    // Save tailored resume endpoint
+    async saveTailoredResume(payload: {
+      tailored_text: string;
+      job_title: string;
+    }): Promise<{ message: string; resume_id: string }> {
+      const response = await fetch(`${this.baseURL}/resumes/save-tailored`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(payload),
+      });
+      return this.handleResponse<{ message: string; resume_id: string }>(response);
+    }
+
+    // PDF Export endpoint
+    async exportResumePDF(payload: { resume_text: string; title: string }): Promise<Blob> {
+      const response = await fetch(`${this.baseURL}/resumes/export-pdf`, {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || "PDF export failed");
+      }
+      return response.blob();
+    }
+
+    async extractJobFromURL(url: string): Promise<{ job_description: string; title?: string; company?: string }> {
+      const response = await this.fetchWithAuth(`${this.baseURL}/jobs/extract-from-url`, {
+        method: "POST",
+        body: JSON.stringify({ url }),
+      });
+      return response.json();
+    }
+
+    async getTailorHistory(): Promise<{ history: Array<{ id: string; tailored_text: string; extracted_requirements?: string; role_title?: string; company_name?: string; created_at: string }> }> {
+      const response = await this.fetchWithAuth(`${this.baseURL}/resumes/tailor-history`);
+      return response.json();
+    }
+
+    async editResumeSection(payload: { full_resume: string; section_name: string; instructions: string; job_description?: string }): Promise<{ updated_resume: string }> {
+      const response = await this.fetchWithAuth(`${this.baseURL}/resumes/edit-section`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+      return response.json();
+    }
   private baseURL: string;
 
   constructor(baseURL: string) {
@@ -376,6 +423,40 @@ class ApiClient {
     });
 
     return this.handleResponse<TailorResponse>(response);
+  }
+
+  // Streaming Resume Tailoring
+  async tailorResumeStream(
+    payload: TailorRequestPayload,
+    onEvent: (event: { type: string; content?: string; message?: string; tailored_resume?: string; extracted_requirements?: string; ats_score?: any; job_id?: string; credits_remaining?: number }) => void,
+  ): Promise<void> {
+    const response = await fetch(`${this.baseURL}/resumes/tailor-stream`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const err = await response.json().catch(() => ({ detail: "Stream request failed" }));
+      throw new Error(typeof err.detail === "string" ? err.detail : err.detail?.message || "Stream failed");
+    }
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("No readable stream");
+    const decoder = new TextDecoder();
+    let buffer = "";
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        try { onEvent(JSON.parse(line)); } catch {}
+      }
+    }
+    if (buffer.trim()) {
+      try { onEvent(JSON.parse(buffer)); } catch {}
+    }
   }
 
   // Cover Letter Endpoints

@@ -198,6 +198,8 @@ export interface TailorRequestPayload {
   options: {
     target_role: string;
     tone: "professional" | "conversational" | "concise";
+    company_name?: string;
+    variation_style?: "balanced" | "skills-focused" | "experience-focused" | "concise";
   };
 }
 
@@ -210,10 +212,25 @@ export interface TailoredResume {
   created_at: string;
 }
 
+export interface ATSScore {
+  score: number;
+  matched: string[];
+  missing: string[];
+  suggestions: string;
+}
+
+
+export interface JobURLExtractResponse {
+  job_description: string;
+  title?: string;
+  company?: string;
+}
 export interface TailorResponse {
   tailored_resume: string;
   extracted_requirements: string;
   usage_id: string;
+  job_id: string;
+  ats_score?: ATSScore;
 }
 
 // Job Analysis Types
@@ -234,6 +251,7 @@ export interface CoverLetterPayload {
   job_description: string;
   company_name: string;
   role_title: string;
+  tone?: "professional" | "conversational" | "concise";
 }
 
 export interface CoverLetter {
