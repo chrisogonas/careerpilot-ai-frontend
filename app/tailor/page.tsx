@@ -62,6 +62,7 @@ export default function TailorResumePage() {
   const [customizationExpanded, setCustomizationExpanded] = useState(false);
   const [gapAnalysisExpanded, setGapAnalysisExpanded] = useState(false);
   const [diffViewExpanded, setDiffViewExpanded] = useState(false);
+  const [customizationText, setCustomizationText] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [jobUrl, setJobUrl] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
@@ -152,6 +153,7 @@ export default function TailorResumePage() {
     setStreamStatus("Initializing...");
     setStep("result");
     setResult(null);
+    setCustomizationText(null);
 
     try {
       if (!user) throw new Error("User not found");
@@ -191,6 +193,20 @@ export default function TailorResumePage() {
                 ats_score: null,
                 gap_analysis: event.gap_analysis || "",
               };
+              // Extract and store customization explanation so it persists
+              {
+                const fullText = event.tailored_resume || "";
+                const custMarker = fullText.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
+                if (custMarker !== -1) {
+                  let custText = fullText
+                    .substring(custMarker)
+                    .replace(/^\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}\s*/, "")
+                    .trim();
+                  const gapM = custText.search(/\*{0,2}GAP ANALYSIS\*{0,2}/);
+                  if (gapM !== -1) custText = custText.substring(0, gapM).trim();
+                  if (custText) setCustomizationText(custText);
+                }
+              }
               setResult(finalResult);
               setIsStreaming(false);
               setStreamStatus("");
@@ -303,6 +319,7 @@ export default function TailorResumePage() {
     setCoverLetterLoading(false);
     setStarStoriesResult(null);
     setStarStoriesLoading(false);
+    setCustomizationText(null);
     setError("");
     setDiffViewExpanded(false);
     setPdfLoading(false);
@@ -852,50 +869,6 @@ export default function TailorResumePage() {
                           )}
                         </div>
 
-                        {/* Customization Explanation - nested collapsible */}
-                        {(() => {
-                          const marker = result.tailored_resume.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/);
-                          if (marker === -1) return null;
-                          let customizationText = result.tailored_resume
-                            .substring(marker)
-                            .replace(/^\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}\s*/, "")
-                            .trim();
-                          // Strip any trailing GAP ANALYSIS section from the customization text
-                          const gapMarker = customizationText.search(/\*{0,2}GAP ANALYSIS\*{0,2}/);
-                          if (gapMarker !== -1) {
-                            customizationText = customizationText.substring(0, gapMarker).trim();
-                          }
-                          if (!customizationText) return null;
-                          return (
-                            <div className="mb-4 border border-blue-300 rounded-lg overflow-hidden">
-                              <button
-                                type="button"
-                                onClick={() => setCustomizationExpanded(!customizationExpanded)}
-                                className="w-full flex items-center justify-between px-4 py-2.5 bg-blue-100 hover:bg-blue-200 transition cursor-pointer"
-                              >
-                                <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
-                                  <span className="text-blue-600">💡</span> Explaining your Resume Customization
-                                </h4>
-                                <svg
-                                  className={`w-4 h-4 text-blue-600 transform transition-transform ${customizationExpanded ? "rotate-180" : ""}`}
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                </svg>
-                              </button>
-                              {customizationExpanded && (
-                                <div className="p-4 bg-blue-100/50">
-                                  <p className="text-gray-700 whitespace-pre-wrap">
-                                    {renderFormattedText(customizationText)}
-                                  </p>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-
                         {/* Extracted Requirements - nested collapsible */}
                         {result.extracted_requirements && (
                           <div className="mb-4 border border-blue-300 rounded-lg overflow-hidden">
@@ -950,6 +923,36 @@ export default function TailorResumePage() {
                               <div className="p-4 bg-amber-50/50">
                                 <p className="text-gray-700 whitespace-pre-wrap">
                                   {renderFormattedText(result.gap_analysis)}
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Customization Explanation - nested collapsible (uses stored state so it persists through edits) */}
+                        {customizationText && (
+                          <div className="mb-4 border border-blue-300 rounded-lg overflow-hidden">
+                            <button
+                              type="button"
+                              onClick={() => setCustomizationExpanded(!customizationExpanded)}
+                              className="w-full flex items-center justify-between px-4 py-2.5 bg-blue-100 hover:bg-blue-200 transition cursor-pointer"
+                            >
+                              <h4 className="text-md font-semibold text-gray-900 flex items-center gap-2">
+                                <span className="text-blue-600">💡</span> Explaining your Resume Customization
+                              </h4>
+                              <svg
+                                className={`w-4 h-4 text-blue-600 transform transition-transform ${customizationExpanded ? "rotate-180" : ""}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                            </button>
+                            {customizationExpanded && (
+                              <div className="p-4 bg-blue-100/50">
+                                <p className="text-gray-700 whitespace-pre-wrap">
+                                  {renderFormattedText(customizationText)}
                                 </p>
                               </div>
                             )}
@@ -1241,7 +1244,7 @@ export default function TailorResumePage() {
                                   Story {idx + 1}
                                 </p>
                                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">
-                                  {story}
+                                  {renderFormattedText(story)}
                                 </p>
                               </div>
                             ))}
