@@ -867,6 +867,9 @@ export default function TailorResumePage() {
                               >
                                 {sectionEditLoading ? "Regenerating..." : "Regenerate Section"}
                               </button>
+                              <p className="mt-1.5 text-xs text-gray-400 text-center">
+                                Each regeneration uses 1 credit.
+                              </p>
                             </div>
                           )}
                         </div>

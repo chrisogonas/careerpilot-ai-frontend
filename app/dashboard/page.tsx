@@ -162,6 +162,7 @@ export default function DashboardPage() {
                 count={usage.usage_this_month.resume_tailors?.count ?? 0}
                 creditsSpent={usage.usage_this_month.resume_tailors?.credits_spent ?? 0}
                 costPer={usage.operation_costs?.resume_tailor ?? 2}
+                subtitle="+1 credit per section edit"
               />
               <UsageCard
                 title="Cover Letters"
@@ -227,11 +228,13 @@ function UsageCard({
   count,
   creditsSpent,
   costPer,
+  subtitle,
 }: {
   title: string;
   count: number;
   creditsSpent: number;
   costPer: number;
+  subtitle?: string;
 }) {
   return (
     <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
@@ -246,6 +249,9 @@ function UsageCard({
       <p className="text-xs text-gray-400 mt-1">
         {costPer} credit{costPer !== 1 ? "s" : ""} per use
       </p>
+      {subtitle && (
+        <p className="text-xs text-gray-400 mt-0.5">{subtitle}</p>
+      )}
     </div>
   );
 }
