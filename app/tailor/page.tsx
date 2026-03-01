@@ -871,7 +871,7 @@ export default function TailorResumePage() {
 
                         {/* Extracted Requirements - nested collapsible */}
                         {result.extracted_requirements && (
-                          <div className="mb-4 border border-blue-300 rounded-lg overflow-hidden">
+                          <div className="mt-6 mb-4 border border-blue-300 rounded-lg overflow-hidden">
                             <button
                               type="button"
                               onClick={() => setExtractedReqsExpanded(!extractedReqsExpanded)}
@@ -1013,7 +1013,7 @@ export default function TailorResumePage() {
                             }
                           }}
                           disabled={pdfLoading}
-                          className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition disabled:opacity-60"
+                          className="mt-3 w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition disabled:opacity-60"
                         >
                           {pdfLoading ? "Generating PDF..." : "Download as PDF"}
                         </button>
@@ -1024,7 +1024,7 @@ export default function TailorResumePage() {
                   <div className="flex gap-4 mb-4">
                     <button
                       onClick={handleReset}
-                      className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg font-medium hover:bg-gray-50 transition"
+                      className="flex-1 bg-indigo-50 border border-indigo-200 text-indigo-700 py-2 rounded-lg font-medium hover:bg-indigo-100 transition"
                     >
                       Tailor Another Resume
                     </button>
@@ -1039,7 +1039,7 @@ export default function TailorResumePage() {
                       className="w-full flex items-center justify-between px-4 py-3 bg-amber-50 hover:bg-amber-100 transition cursor-pointer"
                     >
                       <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                        <span className="text-amber-600">🔍</span> Compare with Original
+                        <span className="text-amber-600">🔍</span> Compare Original and Tailored Resumes
                       </h3>
                       <svg
                         className={`w-5 h-5 text-amber-600 transform transition-transform ${diffViewExpanded ? "rotate-180" : ""}`}
