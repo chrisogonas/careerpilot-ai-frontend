@@ -9,6 +9,8 @@ const POLL_INTERVAL = 60_000; // 60 seconds
 const CYCLE_INTERVAL = 6_000; // 6 seconds per reminder
 
 const SNOOZE_OPTIONS: { label: string; value: SnoozeDuration }[] = [
+  { label: '5 min', value: '5m' },
+  { label: '10 min', value: '10m' },
   { label: '15 min', value: '15m' },
   { label: '1 hour', value: '1h' },
   { label: '4 hours', value: '4h' },

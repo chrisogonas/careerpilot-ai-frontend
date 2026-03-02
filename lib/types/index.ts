@@ -669,7 +669,7 @@ export interface AddFollowUpPayload {
 export type ReminderType = "once" | "recurring";
 export type RecurrenceInterval = "daily" | "every_2_days" | "weekly" | "biweekly" | "monthly";
 export type ReminderStatus = "active" | "snoozed" | "dismissed" | "completed" | "expired";
-export type SnoozeDuration = "15m" | "1h" | "4h" | "1d" | "1w";
+export type SnoozeDuration = "5m" | "10m" | "15m" | "1h" | "4h" | "1d" | "1w";
 
 export type ReminderTimingMode = "at_event" | "before_event" | "custom";
 export type ReminderBeforeUnit = "minutes" | "hours" | "days" | "weeks";
