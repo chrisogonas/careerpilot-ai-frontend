@@ -3,7 +3,21 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
-import { Reminder, SnoozeDuration } from '@/lib/types';
+import { Reminder, TodoReminder, SnoozeDuration } from '@/lib/types';
+
+// Unified wrapper so we can display both follow-up and TODO reminders
+interface UnifiedReminder {
+  id: string;
+  title: string;
+  subtitle: string;
+  source: 'follow_up' | 'todo';
+  sourceId?: string;  // applicationId for follow-up, todoId for todo
+  nextDate: string;
+  reminderType: string;
+  recurrenceInterval?: string;
+  emailEnabled: boolean;
+  emailSentAt?: string;
+}
 
 const POLL_INTERVAL = 60_000; // 60 seconds
 const CYCLE_INTERVAL = 6_000; // 6 seconds per reminder
@@ -63,10 +77,14 @@ function timeAgo(dateStr: string): string {
 }
 
 export default function ReminderBanner() {
-  const { isAuthenticated, getDueReminders, dismissReminder, snoozeReminder, deleteReminder, subscription, currentPlan } = useAuth();
+  const {
+    isAuthenticated, getDueReminders, dismissReminder, snoozeReminder, deleteReminder,
+    getDueTodoReminders, snoozeTodoReminder, dismissTodoReminder, deleteTodoReminder,
+    subscription, currentPlan,
+  } = useAuth();
   const router = useRouter();
 
-  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [reminders, setReminders] = useState<UnifiedReminder[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [snoozeOpenId, setSnoozeOpenId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -75,11 +93,47 @@ export default function ReminderBanner() {
 
   const isPaidPlan = subscription && currentPlan && currentPlan.name !== 'free' && ['active', 'trialing'].includes(subscription.status);
 
+  // Convert raw Reminder to unified
+  const toUnifiedFollowUp = (r: Reminder): UnifiedReminder => ({
+    id: `fu_${r.id}`,
+    title: r.title,
+    subtitle: r.application?.company_name && r.application?.job_title
+      ? `${r.application.company_name} — ${r.application.job_title}`
+      : 'Follow-up reminder',
+    source: 'follow_up',
+    sourceId: r.application_id,
+    nextDate: r.next_reminder_date || r.reminder_date,
+    reminderType: r.reminder_type,
+    recurrenceInterval: r.recurrence_interval,
+    emailEnabled: r.email_enabled || false,
+    emailSentAt: r.email_sent_at,
+  });
+
+  // Convert TodoReminder to unified
+  const toUnifiedTodo = (r: TodoReminder): UnifiedReminder => ({
+    id: `td_${r.id}`,
+    title: r.title,
+    subtitle: 'Todo reminder',
+    source: 'todo',
+    sourceId: r.todo_id,
+    nextDate: r.next_reminder_date || r.reminder_date,
+    reminderType: r.reminder_type,
+    recurrenceInterval: r.recurrence_interval,
+    emailEnabled: r.email_enabled || false,
+    emailSentAt: r.email_sent_at,
+  });
+
   const fetchReminders = useCallback(async () => {
     if (!isAuthenticated || !isPaidPlan) return;
     try {
-      const data = await getDueReminders();
-      const incoming: Reminder[] = data.due_reminders || [];
+      const [fuData, tdData] = await Promise.all([
+        getDueReminders().catch(() => ({ due_reminders: [] })),
+        getDueTodoReminders().catch(() => ({ due_reminders: [] })),
+      ]);
+
+      const fuItems: UnifiedReminder[] = (fuData.due_reminders || []).map(toUnifiedFollowUp);
+      const tdItems: UnifiedReminder[] = (tdData.due_reminders || []).map(toUnifiedTodo);
+      const incoming = [...fuItems, ...tdItems];
       setReminders(incoming);
 
       // Play chime only when genuinely new reminders appear
@@ -92,7 +146,7 @@ export default function ReminderBanner() {
     } catch {
       // Silently fail
     }
-  }, [isAuthenticated, isPaidPlan, getDueReminders]);
+  }, [isAuthenticated, isPaidPlan, getDueReminders, getDueTodoReminders]);
 
   // Initial fetch + polling
   useEffect(() => {
@@ -128,11 +182,16 @@ export default function ReminderBanner() {
     }
   }, [reminders.length, currentIndex]);
 
-  const handleDismiss = async (id: string) => {
-    setActionLoading(id);
+  const handleDismiss = async (unified: UnifiedReminder) => {
+    setActionLoading(unified.id);
     try {
-      await dismissReminder(id);
-      setReminders((prev) => prev.filter((r) => r.id !== id));
+      if (unified.source === 'follow_up') {
+        const realId = unified.id.replace('fu_', '');
+        await dismissReminder(realId);
+      } else {
+        await dismissTodoReminder(unified.sourceId!);
+      }
+      setReminders((prev) => prev.filter((r) => r.id !== unified.id));
     } catch {
       // Silently fail
     } finally {
@@ -140,12 +199,17 @@ export default function ReminderBanner() {
     }
   };
 
-  const handleSnooze = async (id: string, duration: SnoozeDuration) => {
+  const handleSnooze = async (unified: UnifiedReminder, duration: SnoozeDuration) => {
     setSnoozeOpenId(null);
-    setActionLoading(id);
+    setActionLoading(unified.id);
     try {
-      await snoozeReminder(id, duration);
-      setReminders((prev) => prev.filter((r) => r.id !== id));
+      if (unified.source === 'follow_up') {
+        const realId = unified.id.replace('fu_', '');
+        await snoozeReminder(realId, duration);
+      } else {
+        await snoozeTodoReminder(unified.sourceId!, duration);
+      }
+      setReminders((prev) => prev.filter((r) => r.id !== unified.id));
     } catch {
       // Silently fail
     } finally {
@@ -153,11 +217,16 @@ export default function ReminderBanner() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    setActionLoading(id);
+  const handleDelete = async (unified: UnifiedReminder) => {
+    setActionLoading(unified.id);
     try {
-      await deleteReminder(id);
-      setReminders((prev) => prev.filter((r) => r.id !== id));
+      if (unified.source === 'follow_up') {
+        const realId = unified.id.replace('fu_', '');
+        await deleteReminder(realId);
+      } else {
+        await deleteTodoReminder(unified.sourceId!);
+      }
+      setReminders((prev) => prev.filter((r) => r.id !== unified.id));
     } catch {
       // Silently fail
     } finally {
@@ -165,10 +234,11 @@ export default function ReminderBanner() {
     }
   };
 
-  const handleNavigate = (reminder: Reminder) => {
-    const appId = reminder.application_id;
-    if (appId) {
-      router.push(`/applications/${appId}`);
+  const handleNavigate = (unified: UnifiedReminder) => {
+    if (unified.source === 'follow_up' && unified.sourceId) {
+      router.push(`/applications/${unified.sourceId}`);
+    } else if (unified.source === 'todo') {
+      router.push('/todos');
     }
   };
 
@@ -186,7 +256,7 @@ export default function ReminderBanner() {
         <div
           className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group"
           onClick={() => handleNavigate(current)}
-          title="Go to application"
+          title={current.source === 'todo' ? 'Go to todos' : 'Go to application'}
         >
           {/* Animated bell */}
           <span className="relative flex-shrink-0">
@@ -201,26 +271,24 @@ export default function ReminderBanner() {
 
           <div className="min-w-0 flex-1">
             <p className="text-blue-900 text-sm font-semibold truncate group-hover:underline">
+              {current.source === 'todo' && <span className="text-indigo-600 mr-1">📋</span>}
               {current.title}
             </p>
             <p className="text-blue-700 text-xs truncate">
-              {current.application?.company_name && current.application?.job_title
-                ? `${current.application.company_name} — ${current.application.job_title}`
-                : 'Follow-up reminder'
-              }
+              {current.subtitle}
               {' · '}
-              Due {timeAgo(current.next_reminder_date || current.reminder_date)}
-              {current.reminder_type === 'recurring' && current.recurrence_interval && (
+              Due {timeAgo(current.nextDate)}
+              {current.reminderType === 'recurring' && current.recurrenceInterval && (
                 <span className="ml-1 text-blue-500">
-                  (repeats {current.recurrence_interval.replace('_', ' ')})
+                  (repeats {current.recurrenceInterval.replace('_', ' ')})
                 </span>
               )}
-              {current.email_enabled && (
+              {current.emailEnabled && (
                 <span className="ml-1 inline-flex items-center gap-0.5 text-blue-500" title="Email reminder enabled">
                   <svg className="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  {current.email_sent_at ? 'sent' : 'email'}
+                  {current.emailSentAt ? 'sent' : 'email'}
                 </span>
               )}
             </p>
@@ -251,7 +319,7 @@ export default function ReminderBanner() {
                 {SNOOZE_OPTIONS.map((opt) => (
                   <button
                     key={opt.value}
-                    onClick={() => handleSnooze(current.id, opt.value)}
+                    onClick={() => handleSnooze(current, opt.value)}
                     className="w-full text-left px-3 py-1.5 text-sm text-slate-700 hover:bg-blue-50 transition"
                   >
                     {opt.label}
@@ -263,7 +331,7 @@ export default function ReminderBanner() {
 
           {/* Dismiss */}
           <button
-            onClick={() => handleDismiss(current.id)}
+            onClick={() => handleDismiss(current)}
             disabled={isLoading}
             className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition disabled:opacity-50"
             title="Dismiss"
@@ -273,7 +341,7 @@ export default function ReminderBanner() {
 
           {/* Delete */}
           <button
-            onClick={() => handleDelete(current.id)}
+            onClick={() => handleDelete(current)}
             disabled={isLoading}
             className="p-1.5 text-slate-400 hover:text-red-600 transition disabled:opacity-50"
             title="Delete reminder"

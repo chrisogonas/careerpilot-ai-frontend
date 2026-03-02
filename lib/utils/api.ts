@@ -84,6 +84,17 @@ import {
   AnalyticsResponse,
   ContactFormPayload,
   ContactFormResponse,
+  TodoItem,
+  TodoSubtask,
+  TodoReminder,
+  TodoListResponse,
+  CreateTodoPayload,
+  UpdateTodoPayload,
+  CreateTodoReminderPayload,
+  DueTodoRemindersResponse,
+  TodoStatus,
+  TodoCategory,
+  TodoPriority,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -939,6 +950,143 @@ class ApiClient {
     });
 
     return this.handleResponse<ContactFormResponse>(response);
+  }
+
+  // =========================================================================
+  // TODO Methods (Pro/Premium only)
+  // =========================================================================
+
+  async getTodos(filters?: { status?: TodoStatus; category?: TodoCategory; priority?: TodoPriority }): Promise<TodoListResponse> {
+    const params = new URLSearchParams();
+    if (filters?.status) params.set("status", filters.status);
+    if (filters?.category) params.set("category", filters.category);
+    if (filters?.priority) params.set("priority", filters.priority);
+    const qs = params.toString();
+    const url = qs ? `${this.baseURL}/todos?${qs}` : `${this.baseURL}/todos`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<TodoListResponse>(response);
+  }
+
+  async getTodo(todoId: string): Promise<TodoItem> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<TodoItem>(response);
+  }
+
+  async createTodo(payload: CreateTodoPayload): Promise<TodoItem> {
+    const response = await fetch(`${this.baseURL}/todos`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<TodoItem>(response);
+  }
+
+  async updateTodo(todoId: string, payload: UpdateTodoPayload): Promise<TodoItem> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<TodoItem>(response);
+  }
+
+  async deleteTodo(todoId: string): Promise<void> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    await this.handleResponse(response);
+  }
+
+  async addSubtask(todoId: string, title: string): Promise<TodoSubtask> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}/subtasks`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ title }),
+    });
+    return this.handleResponse<TodoSubtask>(response);
+  }
+
+  async updateSubtask(todoId: string, subtaskId: string, data: Partial<TodoSubtask>): Promise<TodoSubtask> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}/subtasks/${subtaskId}`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<TodoSubtask>(response);
+  }
+
+  async deleteSubtask(todoId: string, subtaskId: string): Promise<void> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}/subtasks/${subtaskId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    await this.handleResponse(response);
+  }
+
+  async createTodoReminder(todoId: string, payload: CreateTodoReminderPayload): Promise<TodoReminder> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}/reminder`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<TodoReminder>(response);
+  }
+
+  async updateTodoReminder(todoId: string, payload: Partial<CreateTodoReminderPayload>): Promise<TodoReminder> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}/reminder`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<TodoReminder>(response);
+  }
+
+  async deleteTodoReminder(todoId: string): Promise<void> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}/reminder`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    await this.handleResponse(response);
+  }
+
+  async snoozeTodoReminder(todoId: string, duration: SnoozeDuration): Promise<TodoReminder> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}/reminder/snooze`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ duration }),
+    });
+    return this.handleResponse<TodoReminder>(response);
+  }
+
+  async dismissTodoReminder(todoId: string): Promise<TodoReminder> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}/reminder/dismiss`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<TodoReminder>(response);
+  }
+
+  async completeTodoReminder(todoId: string): Promise<TodoReminder> {
+    const response = await fetch(`${this.baseURL}/todos/${todoId}/reminder/complete`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<TodoReminder>(response);
+  }
+
+  async getDueTodoReminders(): Promise<DueTodoRemindersResponse> {
+    const response = await fetch(`${this.baseURL}/todos/due`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<DueTodoRemindersResponse>(response);
   }
 }
 

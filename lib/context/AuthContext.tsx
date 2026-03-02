@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, CreditPack, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics, GetApplicationResponse, CreateReminderPayload, Reminder, DueRemindersResponse, RemindersListResponse, SnoozeDuration, EmailQuotaResponse } from "@/lib/types";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, CreditPack, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics, GetApplicationResponse, CreateReminderPayload, Reminder, DueRemindersResponse, RemindersListResponse, SnoozeDuration, EmailQuotaResponse, TodoItem, TodoSubtask, TodoReminder, TodoListResponse, CreateTodoPayload, UpdateTodoPayload, CreateTodoReminderPayload, DueTodoRemindersResponse, TodoStatus, TodoCategory, TodoPriority } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
 import { useInactivityTimeout } from "@/lib/hooks/useInactivityTimeout";
 
@@ -779,6 +779,158 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // =========================================================================
+  // TODO Methods (Pro/Premium only)
+  // =========================================================================
+
+  const getTodos = async (filters?: { status?: TodoStatus; category?: TodoCategory; priority?: TodoPriority }): Promise<TodoListResponse> => {
+    try {
+      return await apiClient.getTodos(filters);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch todos";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const getTodo = async (todoId: string): Promise<TodoItem> => {
+    try {
+      return await apiClient.getTodo(todoId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch todo";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const createTodo = async (payload: CreateTodoPayload): Promise<TodoItem> => {
+    try {
+      return await apiClient.createTodo(payload);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create todo";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const updateTodo = async (todoId: string, payload: UpdateTodoPayload): Promise<TodoItem> => {
+    try {
+      return await apiClient.updateTodo(todoId, payload);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update todo";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const deleteTodo = async (todoId: string): Promise<void> => {
+    try {
+      await apiClient.deleteTodo(todoId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete todo";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const addSubtask = async (todoId: string, title: string): Promise<TodoSubtask> => {
+    try {
+      return await apiClient.addSubtask(todoId, title);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to add subtask";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const updateSubtask = async (todoId: string, subtaskId: string, data: Partial<TodoSubtask>): Promise<TodoSubtask> => {
+    try {
+      return await apiClient.updateSubtask(todoId, subtaskId, data);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update subtask";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const deleteSubtask = async (todoId: string, subtaskId: string): Promise<void> => {
+    try {
+      await apiClient.deleteSubtask(todoId, subtaskId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete subtask";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const createTodoReminder = async (todoId: string, payload: CreateTodoReminderPayload): Promise<TodoReminder> => {
+    try {
+      return await apiClient.createTodoReminder(todoId, payload);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create todo reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const updateTodoReminder = async (todoId: string, payload: Partial<CreateTodoReminderPayload>): Promise<TodoReminder> => {
+    try {
+      return await apiClient.updateTodoReminder(todoId, payload);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update todo reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const deleteTodoReminder = async (todoId: string): Promise<void> => {
+    try {
+      await apiClient.deleteTodoReminder(todoId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete todo reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const snoozeTodoReminder = async (todoId: string, duration: SnoozeDuration): Promise<TodoReminder> => {
+    try {
+      return await apiClient.snoozeTodoReminder(todoId, duration);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to snooze todo reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const dismissTodoReminder = async (todoId: string): Promise<TodoReminder> => {
+    try {
+      return await apiClient.dismissTodoReminder(todoId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to dismiss todo reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const completeTodoReminder = async (todoId: string): Promise<TodoReminder> => {
+    try {
+      return await apiClient.completeTodoReminder(todoId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to complete todo reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const getDueTodoReminders = async (): Promise<DueTodoRemindersResponse> => {
+    try {
+      return await apiClient.getDueTodoReminders();
+    } catch {
+      return { due_reminders: [], count: 0 };
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     setError(null);
@@ -859,6 +1011,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     deleteReminder,
     getEmailQuota,
     getAnalytics,
+    getTodos,
+    getTodo,
+    createTodo,
+    updateTodo,
+    deleteTodo,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
+    createTodoReminder,
+    updateTodoReminder,
+    deleteTodoReminder,
+    snoozeTodoReminder,
+    dismissTodoReminder,
+    completeTodoReminder,
+    getDueTodoReminders,
   };
 
   return (

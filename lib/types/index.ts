@@ -728,6 +728,117 @@ export interface RemindersListResponse {
   count: number;
 }
 
+// ============================================================================
+// TODO List (Pro/Premium only)
+// ============================================================================
+
+export type TodoCategory = "career" | "learning" | "networking" | "personal" | "other";
+export type TodoPriority = "low" | "medium" | "high" | "urgent";
+export type TodoStatus = "pending" | "in_progress" | "completed" | "cancelled";
+
+export interface TodoSubtask {
+  id: string;
+  todo_id: string;
+  title: string;
+  is_completed: boolean;
+  sort_order: number;
+  created_at: string;
+}
+
+export interface TodoReminder {
+  id: string;
+  user_id: string;
+  todo_id: string;
+  title: string;
+  reminder_type: ReminderType;
+  recurrence_interval?: RecurrenceInterval;
+  reminder_date: string;
+  next_reminder_date: string;
+  status: ReminderStatus;
+  snooze_until?: string;
+  email_enabled: boolean;
+  email_reminder_date?: string;
+  email_sent_at?: string;
+  dismissed_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  todo?: {
+    id: string;
+    title: string;
+    category: TodoCategory;
+    priority: TodoPriority;
+    status: TodoStatus;
+  };
+}
+
+export interface TodoItem {
+  id: string;
+  user_id: string;
+  application_id?: string;
+  title: string;
+  description?: string;
+  notes?: string;
+  category: TodoCategory;
+  priority: TodoPriority;
+  status: TodoStatus;
+  due_date?: string;
+  completed_at?: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+  subtasks: TodoSubtask[];
+  reminder?: TodoReminder;
+}
+
+export interface CreateTodoPayload {
+  title: string;
+  description?: string;
+  notes?: string;
+  category?: TodoCategory;
+  priority?: TodoPriority;
+  due_date?: string;
+  application_id?: string;
+  subtasks?: { title: string }[];
+  reminder?: {
+    reminder_date: string;
+    reminder_type?: ReminderType;
+    recurrence_interval?: RecurrenceInterval;
+    email_enabled?: boolean;
+    email_reminder_date?: string;
+  };
+}
+
+export interface UpdateTodoPayload {
+  title?: string;
+  description?: string;
+  notes?: string;
+  category?: TodoCategory;
+  priority?: TodoPriority;
+  status?: TodoStatus;
+  due_date?: string | null;
+  application_id?: string | null;
+  sort_order?: number;
+}
+
+export interface CreateTodoReminderPayload {
+  reminder_date: string;
+  reminder_type?: ReminderType;
+  recurrence_interval?: RecurrenceInterval;
+  email_enabled?: boolean;
+  email_reminder_date?: string;
+}
+
+export interface TodoListResponse {
+  todos: TodoItem[];
+  count: number;
+}
+
+export interface DueTodoRemindersResponse {
+  due_reminders: TodoReminder[];
+  count: number;
+}
+
 export interface CreateApplicationResponse {
   id: string;
   job_title: string;
@@ -923,4 +1034,20 @@ export interface AuthContextType {
   deleteReminder: (reminderId: string) => Promise<void>;
   getEmailQuota: () => Promise<EmailQuotaResponse>;
   getAnalytics: () => Promise<UserAnalytics>;
+  // Todos (Pro/Premium)
+  getTodos: (filters?: { status?: TodoStatus; category?: TodoCategory; priority?: TodoPriority }) => Promise<TodoListResponse>;
+  getTodo: (todoId: string) => Promise<TodoItem>;
+  createTodo: (payload: CreateTodoPayload) => Promise<TodoItem>;
+  updateTodo: (todoId: string, payload: UpdateTodoPayload) => Promise<TodoItem>;
+  deleteTodo: (todoId: string) => Promise<void>;
+  addSubtask: (todoId: string, title: string) => Promise<TodoSubtask>;
+  updateSubtask: (todoId: string, subtaskId: string, data: Partial<TodoSubtask>) => Promise<TodoSubtask>;
+  deleteSubtask: (todoId: string, subtaskId: string) => Promise<void>;
+  createTodoReminder: (todoId: string, payload: CreateTodoReminderPayload) => Promise<TodoReminder>;
+  updateTodoReminder: (todoId: string, payload: Partial<CreateTodoReminderPayload>) => Promise<TodoReminder>;
+  deleteTodoReminder: (todoId: string) => Promise<void>;
+  snoozeTodoReminder: (todoId: string, duration: SnoozeDuration) => Promise<TodoReminder>;
+  dismissTodoReminder: (todoId: string) => Promise<TodoReminder>;
+  completeTodoReminder: (todoId: string) => Promise<TodoReminder>;
+  getDueTodoReminders: () => Promise<DueTodoRemindersResponse>;
 }
