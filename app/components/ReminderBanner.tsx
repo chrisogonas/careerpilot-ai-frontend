@@ -1,0 +1,266 @@
+'use client';
+
+import { useEffect, useState, useCallback, useRef } from 'react';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/lib/context/AuthContext';
+import { Reminder, SnoozeDuration } from '@/lib/types';
+
+const POLL_INTERVAL = 60_000; // 60 seconds
+const CYCLE_INTERVAL = 6_000; // 6 seconds per reminder
+
+const SNOOZE_OPTIONS: { label: string; value: SnoozeDuration }[] = [
+  { label: '15 min', value: '15m' },
+  { label: '1 hour', value: '1h' },
+  { label: '4 hours', value: '4h' },
+  { label: '1 day', value: '1d' },
+  { label: '1 week', value: '1w' },
+];
+
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+export default function ReminderBanner() {
+  const { isAuthenticated, getDueReminders, dismissReminder, snoozeReminder, deleteReminder, subscription, currentPlan } = useAuth();
+  const router = useRouter();
+
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [snoozeOpenId, setSnoozeOpenId] = useState<string | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+  const snoozeRef = useRef<HTMLDivElement>(null);
+
+  const isPaidPlan = subscription && currentPlan && currentPlan.name !== 'free' && ['active', 'trialing'].includes(subscription.status);
+
+  const fetchReminders = useCallback(async () => {
+    if (!isAuthenticated || !isPaidPlan) return;
+    try {
+      const data = await getDueReminders();
+      setReminders(data.due_reminders || []);
+    } catch {
+      // Silently fail
+    }
+  }, [isAuthenticated, isPaidPlan, getDueReminders]);
+
+  // Initial fetch + polling
+  useEffect(() => {
+    fetchReminders();
+    const interval = setInterval(fetchReminders, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchReminders]);
+
+  // Cycle through reminders
+  useEffect(() => {
+    if (reminders.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentIndex((prev) => (prev + 1) % reminders.length);
+    }, CYCLE_INTERVAL);
+    return () => clearInterval(interval);
+  }, [reminders.length]);
+
+  // Close snooze dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (snoozeRef.current && !snoozeRef.current.contains(e.target as Node)) {
+        setSnoozeOpenId(null);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Keep index in bounds when reminders change
+  useEffect(() => {
+    if (currentIndex >= reminders.length) {
+      setCurrentIndex(Math.max(0, reminders.length - 1));
+    }
+  }, [reminders.length, currentIndex]);
+
+  const handleDismiss = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await dismissReminder(id);
+      setReminders((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      // Silently fail
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleSnooze = async (id: string, duration: SnoozeDuration) => {
+    setSnoozeOpenId(null);
+    setActionLoading(id);
+    try {
+      await snoozeReminder(id, duration);
+      setReminders((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      // Silently fail
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    setActionLoading(id);
+    try {
+      await deleteReminder(id);
+      setReminders((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      // Silently fail
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleNavigate = (reminder: Reminder) => {
+    const appId = reminder.application_id;
+    if (appId) {
+      router.push(`/applications/${appId}`);
+    }
+  };
+
+  if (reminders.length === 0) return null;
+
+  const current = reminders[currentIndex];
+  if (!current) return null;
+
+  const isLoading = actionLoading === current.id;
+
+  return (
+    <div className="bg-blue-50 border-b border-blue-200 px-4 py-3 animate-pulse-subtle">
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-3">
+        {/* Left: Bell icon + reminder info */}
+        <div
+          className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer group"
+          onClick={() => handleNavigate(current)}
+          title="Go to application"
+        >
+          {/* Animated bell */}
+          <span className="relative flex-shrink-0">
+            <svg className="w-5 h-5 text-blue-600 animate-wiggle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            <span className="absolute -top-1 -right-1 flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
+            </span>
+          </span>
+
+          <div className="min-w-0 flex-1">
+            <p className="text-blue-900 text-sm font-semibold truncate group-hover:underline">
+              {current.title}
+            </p>
+            <p className="text-blue-700 text-xs truncate">
+              {current.application?.company_name && current.application?.job_title
+                ? `${current.application.company_name} — ${current.application.job_title}`
+                : 'Follow-up reminder'
+              }
+              {' · '}
+              Due {timeAgo(current.next_reminder_date || current.reminder_date)}
+              {current.reminder_type === 'recurring' && current.recurrence_interval && (
+                <span className="ml-1 text-blue-500">
+                  (repeats {current.recurrence_interval.replace('_', ' ')})
+                </span>
+              )}
+              {current.email_enabled && (
+                <span className="ml-1 inline-flex items-center gap-0.5 text-blue-500" title="Email reminder enabled">
+                  <svg className="w-3 h-3 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  {current.email_sent_at ? 'sent' : 'email'}
+                </span>
+              )}
+            </p>
+          </div>
+
+          {/* Counter badge */}
+          {reminders.length > 1 && (
+            <span className="flex-shrink-0 text-xs bg-blue-200 text-blue-800 font-bold px-2 py-0.5 rounded-full">
+              {currentIndex + 1}/{reminders.length}
+            </span>
+          )}
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Snooze dropdown */}
+          <div className="relative" ref={snoozeRef}>
+            <button
+              onClick={() => setSnoozeOpenId(snoozeOpenId === current.id ? null : current.id)}
+              disabled={isLoading}
+              className="px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-100 hover:bg-blue-200 rounded-md transition disabled:opacity-50"
+              title="Snooze"
+            >
+              Snooze
+            </button>
+            {snoozeOpenId === current.id && (
+              <div className="absolute right-0 top-full mt-1 bg-white rounded-lg shadow-lg border border-slate-200 py-1 z-50 min-w-[120px]">
+                {SNOOZE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    onClick={() => handleSnooze(current.id, opt.value)}
+                    className="w-full text-left px-3 py-1.5 text-sm text-slate-700 hover:bg-blue-50 transition"
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Dismiss */}
+          <button
+            onClick={() => handleDismiss(current.id)}
+            disabled={isLoading}
+            className="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-md transition disabled:opacity-50"
+            title="Dismiss"
+          >
+            Dismiss
+          </button>
+
+          {/* Delete */}
+          <button
+            onClick={() => handleDelete(current.id)}
+            disabled={isLoading}
+            className="p-1.5 text-slate-400 hover:text-red-600 transition disabled:opacity-50"
+            title="Delete reminder"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      {/* Custom animations */}
+      <style jsx>{`
+        @keyframes wiggle {
+          0%, 100% { transform: rotate(0deg); }
+          15% { transform: rotate(12deg); }
+          30% { transform: rotate(-10deg); }
+          45% { transform: rotate(6deg); }
+          60% { transform: rotate(-4deg); }
+          75% { transform: rotate(2deg); }
+        }
+        @keyframes pulse-subtle {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.92; }
+        }
+        :global(.animate-wiggle) {
+          animation: wiggle 1.5s ease-in-out infinite;
+        }
+        :global(.animate-pulse-subtle) {
+          animation: pulse-subtle 3s ease-in-out infinite;
+        }
+      `}</style>
+    </div>
+  );
+}

@@ -74,6 +74,12 @@ import {
   AddFollowUpPayload,
   AddFollowUpResponse,
   FollowUp,
+  CreateReminderPayload,
+  Reminder,
+  DueRemindersResponse,
+  RemindersListResponse,
+  SnoozeDuration,
+  EmailQuotaResponse,
   UserAnalytics,
   AnalyticsResponse,
   ContactFormPayload,
@@ -838,6 +844,79 @@ class ApiClient {
     });
 
     await this.handleResponse(response);
+  }
+
+  // =========================================================================
+  // Reminder Methods (Follow-Up Reminders — Pro/Premium only)
+  // =========================================================================
+
+  async getDueReminders(): Promise<DueRemindersResponse> {
+    const response = await fetch(`${this.baseURL}/reminders/due`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<DueRemindersResponse>(response);
+  }
+
+  async getReminders(status?: string): Promise<RemindersListResponse> {
+    const url = status
+      ? `${this.baseURL}/reminders?status=${encodeURIComponent(status)}`
+      : `${this.baseURL}/reminders`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<RemindersListResponse>(response);
+  }
+
+  async createReminder(payload: CreateReminderPayload): Promise<Reminder> {
+    const response = await fetch(`${this.baseURL}/reminders`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<Reminder>(response);
+  }
+
+  async dismissReminder(reminderId: string): Promise<Reminder> {
+    const response = await fetch(`${this.baseURL}/reminders/${reminderId}/dismiss`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<Reminder>(response);
+  }
+
+  async snoozeReminder(reminderId: string, duration: SnoozeDuration): Promise<Reminder> {
+    const response = await fetch(`${this.baseURL}/reminders/${reminderId}/snooze`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ duration }),
+    });
+    return this.handleResponse<Reminder>(response);
+  }
+
+  async completeReminder(reminderId: string): Promise<Reminder> {
+    const response = await fetch(`${this.baseURL}/reminders/${reminderId}/complete`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<Reminder>(response);
+  }
+
+  async deleteReminder(reminderId: string): Promise<void> {
+    const response = await fetch(`${this.baseURL}/reminders/${reminderId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    await this.handleResponse(response);
+  }
+
+  async getEmailQuota(): Promise<EmailQuotaResponse> {
+    const response = await fetch(`${this.baseURL}/reminders/email-quota`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<EmailQuotaResponse>(response);
   }
 
   // Analytics Methods

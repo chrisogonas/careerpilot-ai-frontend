@@ -20,6 +20,16 @@ interface ResumeInputError {
 export default function TailorResumePage() {
   const { user, isAuthenticated, isLoading: authLoading, getResumes } = useAuth();
 
+  // Helper: strip CUSTOMIZATION EXPLANATION / GAP ANALYSIS from tailored resume text
+  const getCleanResume = (text: string) => {
+    const markers = [
+      text.search(/\*{0,2}CUSTOMIZATION EXPLANATION\*{0,2}/),
+      text.search(/\*{0,2}GAP ANALYSIS\*{0,2}/),
+    ].filter(m => m !== -1);
+    const earliest = markers.length ? Math.min(...markers) : -1;
+    return earliest !== -1 ? text.substring(0, earliest).trimEnd() : text;
+  };
+
   // Save tailored resume states
   const [saveLoading, setSaveLoading] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
@@ -81,17 +91,67 @@ export default function TailorResumePage() {
    * Splits on **...** patterns and alternates between plain text and bold spans.
    */
   const renderFormattedText = (text: string) => {
-    const parts = text.split(/(\*\*[^*]+\*\*)/);
-    return parts.map((part, i) => {
-      if (part.startsWith("**") && part.endsWith("**")) {
-        return (
-          <strong key={i} className="font-bold">
-            {part.slice(2, -2)}
-          </strong>
+    const lines = text.split("\n");
+
+    // Helper: render inline **bold** within a line
+    const renderInline = (str: string) => {
+      const parts = str.split(/(\*\*[^*]+\*\*)/);
+      return parts.map((part, i) => {
+        if (part.startsWith("**") && part.endsWith("**")) {
+          return <strong key={i} className="font-bold">{part.slice(2, -2)}</strong>;
+        }
+        return <span key={i}>{part}</span>;
+      });
+    };
+
+    // Group consecutive lines into blocks: bullet runs become <ul>, others stay as spans
+    const elements: React.ReactNode[] = [];
+    let bulletBuffer: { text: string; idx: number }[] = [];
+    let key = 0;
+
+    const flushBullets = () => {
+      if (bulletBuffer.length === 0) return;
+      elements.push(
+        <ul key={key++} className="list-disc my-0" style={{ paddingLeft: "1.2em" }}>
+          {bulletBuffer.map((b) => {
+            // Strip the leading bullet char (•, -, *) and whitespace
+            const body = b.text.replace(/^[•\u2022\-*]\s*/, "");
+            return (
+              <li key={b.idx} className="pl-0">
+                {renderInline(body)}
+              </li>
+            );
+          })}
+        </ul>
+      );
+      bulletBuffer = [];
+    };
+
+    for (let i = 0; i < lines.length; i++) {
+      const trimmed = lines[i].trim();
+      const isBullet = /^[•\u2022\-*]\s/.test(trimmed);
+
+      if (isBullet) {
+        bulletBuffer.push({ text: trimmed, idx: i });
+        continue;
+      }
+
+      // Non-bullet line: flush any pending bullets first
+      flushBullets();
+
+      if (!trimmed) {
+        elements.push(<span key={key++} className="block" style={{ height: "0.5em" }} />);
+      } else {
+        elements.push(
+          <span key={key++} className="block">
+            {renderInline(trimmed)}
+          </span>
         );
       }
-      return <span key={i}>{part}</span>;
-    });
+    }
+    flushBullets(); // flush trailing bullets
+
+    return elements;
   };
 
   // Fetch saved resumes on mount
@@ -291,7 +351,7 @@ export default function TailorResumePage() {
     setSaveMessage("");
     try {
       const payload = {
-        tailored_text: result.tailored_resume,
+        tailored_text: getCleanResume(result.tailored_resume),
         job_title: targetRole,
       };
       const resp: SaveTailoredResponse = await apiClient.saveTailoredResume(payload);
@@ -688,10 +748,10 @@ export default function TailorResumePage() {
                   </div>
                   {streamingText && (
                     <div className="bg-white p-4 rounded-lg border border-blue-200 max-h-96 overflow-y-auto">
-                      <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                      <div className="text-gray-700 whitespace-pre-wrap text-sm">
                         {renderFormattedText(streamingText)}
                         <span className="inline-block w-2 h-4 bg-blue-600 animate-pulse ml-0.5"></span>
-                      </p>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -781,7 +841,7 @@ export default function TailorResumePage() {
                         {/* Tailored Resume Text (without CUSTOMIZATION EXPLANATION) */}
                         <div className="mb-4">
                           <div className="bg-white p-4 rounded-lg border border-blue-200">
-                            <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                            <div className="text-gray-700 whitespace-pre-wrap text-sm">
                               {renderFormattedText(
                                 (() => {
                                   const text = result.tailored_resume;
@@ -795,7 +855,7 @@ export default function TailorResumePage() {
                                     : text;
                                 })()
                               )}
-                            </p>
+                            </div>
                           </div>
                         </div>
 
@@ -893,9 +953,9 @@ export default function TailorResumePage() {
                             </button>
                             {extractedReqsExpanded && (
                               <div className="p-4 bg-blue-100/50">
-                                <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                                <div className="text-gray-700 whitespace-pre-wrap text-sm">
                                   {renderFormattedText(result.extracted_requirements)}
-                                </p>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -923,9 +983,9 @@ export default function TailorResumePage() {
                             </button>
                             {gapAnalysisExpanded && (
                               <div className="p-4 bg-amber-50/50">
-                                <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                                <div className="text-gray-700 whitespace-pre-wrap text-sm">
                                   {renderFormattedText(result.gap_analysis)}
-                                </p>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -953,9 +1013,9 @@ export default function TailorResumePage() {
                             </button>
                             {customizationExpanded && (
                               <div className="p-4 bg-blue-100/50">
-                                <p className="text-gray-700 whitespace-pre-wrap text-sm">
+                                <div className="text-gray-700 whitespace-pre-wrap text-sm">
                                   {renderFormattedText(customizationText)}
-                                </p>
+                                </div>
                               </div>
                             )}
                           </div>
@@ -984,7 +1044,7 @@ export default function TailorResumePage() {
 
                         <button
                           onClick={() => {
-                            navigator.clipboard.writeText(result.tailored_resume);
+                            navigator.clipboard.writeText(getCleanResume(result.tailored_resume));
                             alert("Resume copied to clipboard!");
                           }}
                           className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-medium transition"
@@ -997,7 +1057,7 @@ export default function TailorResumePage() {
                             try {
                               setPdfLoading(true);
                               const blob = await apiClient.exportResumePDF({
-                                resume_text: result.tailored_resume,
+                                resume_text: getCleanResume(result.tailored_resume),
                                 title: targetRole || "Tailored Resume",
                               });
                               const url = URL.createObjectURL(blob);
@@ -1068,7 +1128,7 @@ export default function TailorResumePage() {
                               <span className="text-green-500">▶</span> Tailored Resume
                             </h4>
                             <div className="bg-green-50 border border-green-200 rounded-lg p-3 max-h-96 overflow-y-auto">
-                              <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                              <div className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
                                 {renderFormattedText(
                                   (() => {
                                     const text = result.tailored_resume;
@@ -1080,7 +1140,7 @@ export default function TailorResumePage() {
                                     return earliest !== -1 ? text.substring(0, earliest).trimEnd() : text;
                                   })()
                                 )}
-                              </p>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -1245,9 +1305,9 @@ export default function TailorResumePage() {
                                 <p className="text-sm font-semibold text-green-700 mb-2">
                                   Story {idx + 1}
                                 </p>
-                                <p className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
+                                <div className="text-gray-700 whitespace-pre-wrap text-sm leading-relaxed">
                                   {renderFormattedText(story)}
-                                </p>
+                                </div>
                               </div>
                             ))}
                           </div>
@@ -1282,7 +1342,7 @@ export default function TailorResumePage() {
                             company_name: companyName,
                             job_description: jobDescription,
                             resume_id: selectedResumeId,
-                            applied_resume_text: result.tailored_resume,
+                            applied_resume_text: getCleanResume(result.tailored_resume),
                           })
                         );
                         window.open("/applications/new", "_blank");

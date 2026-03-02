@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Navbar from "./components/Navbar";
 import GracePeriodBanner from "./components/GracePeriodBanner";
+import ReminderBanner from "./components/ReminderBanner";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import "./globals.css";
 
@@ -34,6 +35,7 @@ export default function RootLayout({
         <AuthProvider>
           <Navbar />
           <GracePeriodBanner />
+          <ReminderBanner />
           {children}
         </AuthProvider>
       </body>

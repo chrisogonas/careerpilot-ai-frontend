@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, CreditPack, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics, GetApplicationResponse } from "@/lib/types";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, CreditPack, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics, GetApplicationResponse, CreateReminderPayload, Reminder, DueRemindersResponse, RemindersListResponse, SnoozeDuration, EmailQuotaResponse } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
 import { useInactivityTimeout } from "@/lib/hooks/useInactivityTimeout";
 
@@ -680,6 +680,89 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // =========================================================================
+  // Reminder Methods (Follow-Up Reminders — Pro/Premium only)
+  // =========================================================================
+
+  const getDueReminders = async (): Promise<DueRemindersResponse> => {
+    try {
+      return await apiClient.getDueReminders();
+    } catch {
+      // Silently fail — don't block the banner from showing
+      return { due_reminders: [], count: 0 };
+    }
+  };
+
+  const getReminders = async (status?: string): Promise<RemindersListResponse> => {
+    try {
+      return await apiClient.getReminders(status);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch reminders";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const createReminder = async (payload: CreateReminderPayload): Promise<Reminder> => {
+    try {
+      return await apiClient.createReminder(payload);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const dismissReminder = async (reminderId: string): Promise<Reminder> => {
+    try {
+      return await apiClient.dismissReminder(reminderId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to dismiss reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const snoozeReminder = async (reminderId: string, duration: SnoozeDuration): Promise<Reminder> => {
+    try {
+      return await apiClient.snoozeReminder(reminderId, duration);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to snooze reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const completeReminder = async (reminderId: string): Promise<Reminder> => {
+    try {
+      return await apiClient.completeReminder(reminderId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to complete reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const deleteReminder = async (reminderId: string): Promise<void> => {
+    try {
+      await apiClient.deleteReminder(reminderId);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
+  const getEmailQuota = async (): Promise<EmailQuotaResponse> => {
+    try {
+      return await apiClient.getEmailQuota();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to fetch email quota";
+      setError(message);
+      throw err;
+    }
+  };
+
   // Analytics Methods
   const getAnalytics = async (): Promise<UserAnalytics> => {
     setIsLoading(true);
@@ -767,6 +850,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     deleteApplication,
     addFollowUp,
     deleteFollowUp,
+    getDueReminders,
+    getReminders,
+    createReminder,
+    dismissReminder,
+    snoozeReminder,
+    completeReminder,
+    deleteReminder,
+    getEmailQuota,
     getAnalytics,
   };
 

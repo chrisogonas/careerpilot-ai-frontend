@@ -662,6 +662,72 @@ export interface AddFollowUpPayload {
   scheduled_date?: string;
 }
 
+// ============================================================================
+// Follow-Up Reminders (Pro/Premium only)
+// ============================================================================
+
+export type ReminderType = "once" | "recurring";
+export type RecurrenceInterval = "daily" | "every_2_days" | "weekly" | "biweekly" | "monthly";
+export type ReminderStatus = "active" | "snoozed" | "dismissed" | "completed" | "expired";
+export type SnoozeDuration = "15m" | "1h" | "4h" | "1d" | "1w";
+
+export type ReminderTimingMode = "at_event" | "before_event" | "custom";
+export type ReminderBeforeUnit = "minutes" | "hours" | "days" | "weeks";
+
+export interface Reminder {
+  id: string;
+  user_id: string;
+  follow_up_id: string;
+  application_id: string;
+  title: string;
+  reminder_type: ReminderType;
+  recurrence_interval?: RecurrenceInterval;
+  reminder_date: string;
+  next_reminder_date: string;
+  status: ReminderStatus;
+  snooze_until?: string;
+  email_enabled: boolean;
+  email_reminder_date?: string;
+  email_sent_at?: string;
+  dismissed_at?: string;
+  completed_at?: string;
+  created_at: string;
+  updated_at: string;
+  application?: {
+    id: string;
+    job_title: string;
+    company_name: string;
+    status: string;
+  };
+}
+
+export interface CreateReminderPayload {
+  follow_up_id: string;
+  reminder_date: string;
+  reminder_type?: ReminderType;
+  recurrence_interval?: RecurrenceInterval;
+  title?: string;
+  email_enabled?: boolean;
+  email_reminder_date?: string;
+}
+
+export interface EmailQuotaResponse {
+  email_reminder_limit: number;
+  email_reminders_used: number;
+  email_reminders_remaining: number;
+  can_create_email_reminder: boolean;
+}
+
+export interface DueRemindersResponse {
+  due_reminders: Reminder[];
+  count: number;
+}
+
+export interface RemindersListResponse {
+  reminders: Reminder[];
+  count: number;
+}
+
 export interface CreateApplicationResponse {
   id: string;
   job_title: string;
@@ -847,5 +913,14 @@ export interface AuthContextType {
   deleteApplication: (id: string) => Promise<void>;
   addFollowUp: (applicationId: string, payload: AddFollowUpPayload) => Promise<FollowUp>;
   deleteFollowUp: (applicationId: string, followUpId: string) => Promise<void>;
+  // Reminders (Pro/Premium)
+  getDueReminders: () => Promise<DueRemindersResponse>;
+  getReminders: (status?: string) => Promise<RemindersListResponse>;
+  createReminder: (payload: CreateReminderPayload) => Promise<Reminder>;
+  dismissReminder: (reminderId: string) => Promise<Reminder>;
+  snoozeReminder: (reminderId: string, duration: SnoozeDuration) => Promise<Reminder>;
+  completeReminder: (reminderId: string) => Promise<Reminder>;
+  deleteReminder: (reminderId: string) => Promise<void>;
+  getEmailQuota: () => Promise<EmailQuotaResponse>;
   getAnalytics: () => Promise<UserAnalytics>;
 }
