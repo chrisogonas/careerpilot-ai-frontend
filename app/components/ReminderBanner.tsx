@@ -8,6 +8,39 @@ import { Reminder, SnoozeDuration } from '@/lib/types';
 const POLL_INTERVAL = 60_000; // 60 seconds
 const CYCLE_INTERVAL = 6_000; // 6 seconds per reminder
 
+// ---------------------------------------------------------------------------
+// Soft chime via Web Audio API (no external file needed)
+// Plays two quick ascending tones that feel like a friendly notification.
+// ---------------------------------------------------------------------------
+function playChime() {
+  try {
+    const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)();
+
+    const playTone = (freq: number, startSec: number, durSec: number, gain: number) => {
+      const osc = ctx.createOscillator();
+      const vol = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      vol.gain.setValueAtTime(gain, ctx.currentTime + startSec);
+      // Gentle fade-out so it doesn't click
+      vol.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startSec + durSec);
+      osc.connect(vol);
+      vol.connect(ctx.destination);
+      osc.start(ctx.currentTime + startSec);
+      osc.stop(ctx.currentTime + startSec + durSec);
+    };
+
+    // Two friendly ascending notes (C6 → E6)
+    playTone(1047, 0, 0.15, 0.18);   // C6
+    playTone(1319, 0.12, 0.22, 0.14); // E6
+
+    // Close context after sounds finish to free resources
+    setTimeout(() => ctx.close().catch(() => {}), 600);
+  } catch {
+    // Web Audio not supported — degrade silently
+  }
+}
+
 const SNOOZE_OPTIONS: { label: string; value: SnoozeDuration }[] = [
   { label: '5 min', value: '5m' },
   { label: '10 min', value: '10m' },
@@ -38,6 +71,7 @@ export default function ReminderBanner() {
   const [snoozeOpenId, setSnoozeOpenId] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const snoozeRef = useRef<HTMLDivElement>(null);
+  const prevReminderIdsRef = useRef<Set<string>>(new Set());
 
   const isPaidPlan = subscription && currentPlan && currentPlan.name !== 'free' && ['active', 'trialing'].includes(subscription.status);
 
@@ -45,7 +79,16 @@ export default function ReminderBanner() {
     if (!isAuthenticated || !isPaidPlan) return;
     try {
       const data = await getDueReminders();
-      setReminders(data.due_reminders || []);
+      const incoming: Reminder[] = data.due_reminders || [];
+      setReminders(incoming);
+
+      // Play chime only when genuinely new reminders appear
+      const prevIds = prevReminderIdsRef.current;
+      const hasNew = incoming.some((r) => !prevIds.has(r.id));
+      if (hasNew && incoming.length > 0) {
+        playChime();
+      }
+      prevReminderIdsRef.current = new Set(incoming.map((r) => r.id));
     } catch {
       // Silently fail
     }
