@@ -7,12 +7,13 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiClient } from "@/lib/utils/api";
-import { UsageResponse } from "@/lib/types";
+import { UsageResponse, EmailQuotaResponse } from "@/lib/types";
 
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [usage, setUsage] = useState<UsageResponse | null>(null);
+  const [emailQuota, setEmailQuota] = useState<EmailQuotaResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -29,8 +30,12 @@ export default function DashboardPage() {
 
   const fetchUsage = async () => {
     try {
-      const response = await apiClient.getUsage();
-      setUsage(response);
+      const [usageRes, emailRes] = await Promise.all([
+        apiClient.getUsage(),
+        apiClient.getEmailQuota(),
+      ]);
+      setUsage(usageRes);
+      setEmailQuota(emailRes);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load usage data"
@@ -89,9 +94,9 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Plan and Credits Card */}
+        {/* Plan, Credits, Emails & Upgrade Cards */}
         {usage && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {/* Plan Status */}
             <div className="bg-white rounded-lg shadow p-6">
               <h2 className="text-sm font-medium text-gray-600 mb-2">
@@ -128,6 +133,55 @@ export default function DashboardPage() {
               <p className="text-gray-500 text-xs mt-2">
                 of {usage.monthly_credits} monthly credits
               </p>
+            </div>
+
+            {/* Email Reminders */}
+            <div className="bg-white rounded-lg shadow p-6">
+              <h2 className="text-sm font-medium text-gray-600 mb-2">
+                Reminder Emails
+              </h2>
+              {emailQuota && emailQuota.email_reminder_limit > 0 ? (
+                <>
+                  <p className="text-5xl font-bold text-emerald-600">
+                    {emailQuota.email_reminders_remaining}
+                  </p>
+                  <div className="w-full bg-gray-200 rounded-full h-2 mt-3">
+                    <div
+                      className={`h-2 rounded-full transition-all ${
+                        emailQuota.email_reminders_remaining / emailQuota.email_reminder_limit <= 0.15
+                          ? "bg-red-500"
+                          : emailQuota.email_reminders_remaining / emailQuota.email_reminder_limit <= 0.35
+                          ? "bg-amber-500"
+                          : "bg-emerald-500"
+                      }`}
+                      style={{
+                        width: `${Math.min(
+                          (emailQuota.email_reminders_remaining / emailQuota.email_reminder_limit) * 100,
+                          100
+                        )}%`,
+                      }}
+                    ></div>
+                  </div>
+                  <p className="text-gray-500 text-xs mt-2">
+                    of {emailQuota.email_reminder_limit} monthly emails
+                    {emailQuota.email_reminders_used > 0 && (
+                      <span className="text-gray-400">
+                        {" "}· {emailQuota.email_reminders_used} used
+                      </span>
+                    )}
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="text-2xl font-bold text-gray-300 mt-1">—</p>
+                  <p className="text-gray-500 text-xs mt-4">
+                    <Link href="/subscribe" className="text-blue-600 hover:text-blue-700 hover:underline font-medium">
+                      Upgrade to Pro
+                    </Link>{" "}
+                    to unlock email reminders
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Upgrade CTA */}
