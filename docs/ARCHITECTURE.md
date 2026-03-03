@@ -82,17 +82,20 @@ app/
 ```
 lib/
 ├── context/
-│   └── AuthContext.tsx         # Authentication state & logic
-│                               # Provides useAuth() hook
+│   ├── AuthContext.tsx             # Authentication state & logic
+│   │                               # Provides useAuth() hook
+│   └── NotificationContext.tsx     # Notification tray state
+│                                   # Provides useNotifications() hook
+│                                   # Manages parked reminders (max 20)
 ├── types/
-│   └── index.ts               # TypeScript interfaces
-│                               # - User, Auth, API types
-│                               # - Request/Response types
+│   └── index.ts                   # TypeScript interfaces
+│                                   # - User, Auth, API types
+│                                   # - Request/Response types
 └── utils/
-    └── api.ts                 # API client class
-                               # - HTTP methods
-                               # - Token management
-                               # - Error handling
+    └── api.ts                     # API client class
+                                   # - HTTP methods
+                                   # - Token management
+                                   # - Error handling
 ```
 
 ### `/docs` - Documentation
@@ -138,6 +141,7 @@ Redirect to Dashboard
 
 ### 2. State Management (Context API)
 
+**AuthContext** — Primary authentication and API state:
 ```typescript
 // AuthContext provides:
 interface AuthContextType {
@@ -155,6 +159,21 @@ interface AuthContextType {
 **Usage:**
 ```typescript
 const { user, isAuthenticated, login } = useAuth();
+```
+
+**NotificationContext** — Parked reminder tray state:
+```typescript
+interface NotificationContextType {
+  parkedReminders: ParkedReminder[];    // Reminders auto-dismissed from banner
+  parkReminder(r: UnifiedReminder): void;  // Park a reminder (max 20, FIFO)
+  removeParkedReminder(id: string): void;  // Remove from tray
+  clearAllParked(): void;                  // Clear entire tray
+}
+```
+
+**Usage:**
+```typescript
+const { parkedReminders, parkReminder } = useNotifications();
 ```
 
 ### 3. API Client Architecture
@@ -340,4 +359,4 @@ For enterprise scaling:
 
 ---
 
-**Last Updated**: February 24, 2026
+**Last Updated**: March 3, 2026

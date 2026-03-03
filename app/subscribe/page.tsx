@@ -7,7 +7,7 @@ import { Plan, CreditPack } from "@/lib/types";
 
 export default function SubscribePage() {
   const router = useRouter();
-  const { user, isLoading, getPlans, subscription, error, createCheckoutSession, getCreditPacks, createCreditPackCheckout } = useAuth();
+  const { user, isLoading, getPlans, subscription, error, createCheckoutSession, getCreditPacks, createCreditPackCheckout, getSubscription } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [creditPacks, setCreditPacks] = useState<CreditPack[]>([]);
   const [selectedBillingCycle, setSelectedBillingCycle] = useState<"monthly" | "yearly">("monthly");
@@ -30,6 +30,7 @@ export default function SubscribePage() {
         const [fetchedPlans, fetchedPacks] = await Promise.all([
           getPlans(),
           getCreditPacks(),
+          getSubscription(),
         ]);
         setPlans(fetchedPlans);
         setCreditPacks(fetchedPacks);

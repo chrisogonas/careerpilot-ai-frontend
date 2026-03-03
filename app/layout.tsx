@@ -3,7 +3,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import Sidebar from "./components/Sidebar";
 import GracePeriodBanner from "./components/GracePeriodBanner";
 import ReminderBanner from "./components/ReminderBanner";
+import NotificationTray from "./components/NotificationTray";
 import { AuthProvider } from "@/lib/context/AuthContext";
+import { NotificationProvider } from "@/lib/context/NotificationContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -33,12 +35,15 @@ export default function RootLayout({
         suppressHydrationWarning
       >
         <AuthProvider>
-          <Sidebar />
-          <div className="pt-14">
-            <GracePeriodBanner />
-            <ReminderBanner />
-            {children}
-          </div>
+          <NotificationProvider>
+            <Sidebar />
+            <div className="pt-14">
+              <GracePeriodBanner />
+              <ReminderBanner />
+              {children}
+            </div>
+            <NotificationTray />
+          </NotificationProvider>
         </AuthProvider>
       </body>
     </html>

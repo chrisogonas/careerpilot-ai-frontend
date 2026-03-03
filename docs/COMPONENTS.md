@@ -9,7 +9,10 @@ This guide documents all React components in the CareerPilot AI frontend, their 
 ```
 Components (in both /app/components and /app/{feature}/page.tsx)
 ├── Shared Components
-│   └── Navbar.tsx
+│   ├── Sidebar.tsx
+│   ├── GracePeriodBanner.tsx
+│   ├── ReminderBanner.tsx
+│   └── NotificationTray.tsx
 ├── Auth Components
 │   ├── LoginPage
 │   └── RegisterPage
@@ -60,6 +63,75 @@ export default function RootLayout() {
 **States:**
 - **Unauthenticated**: Shows Home, Pricing, Sign In links
 - **Authenticated**: Shows Dashboard, Tailor Resume, user info, Logout
+
+---
+
+### ReminderBanner Component
+
+**Location**: `app/components/ReminderBanner.tsx`
+
+**Purpose**: Top-of-screen flash banner that displays due follow-up and TODO reminders. Auto-dismisses reminders after 60 seconds, parking them in the NotificationTray.
+
+**Features:**
+- Polls backend every 60s for due follow-up and TODO reminders
+- Cycles through multiple reminders every 6s with counter badge
+- Plays a soft Web Audio API chime when new reminders appear
+- **Auto-dismiss**: After 60 seconds of visibility, each reminder auto-parks to the NotificationTray
+- Click-to-navigate: follow-up → `/applications/{id}`, todo → `/todos`
+- Snooze (5m / 10m / 15m / 1h / 4h / 1d / 1w), dismiss, and delete actions
+- Only shows for paid-plan users (Pro/Premium with active/trialing subscription)
+- Filters out reminders already parked in the notification tray
+
+**Props**: None (uses `useAuth` and `useNotifications` hooks)
+
+**Key Constants:**
+- `POLL_INTERVAL = 60_000` — API polling frequency
+- `CYCLE_INTERVAL = 6_000` — Rotation speed between reminders
+- `AUTO_DISMISS_MS = 60_000` — Time before auto-parking
+
+---
+
+### NotificationTray Component
+
+**Location**: `app/components/NotificationTray.tsx`
+
+**Purpose**: Fixed bottom-right bell icon with flyout panel that holds auto-dismissed (parked) reminders.
+
+**Features:**
+- **Bell icon**: Blue with red count badge when reminders are parked; gray when empty
+- **Flyout panel**: Click bell to show list of parked reminders (max 20, newest first)
+- Each reminder shows title, subtitle, and due time
+- **Actions per reminder**: Snooze (same 7 options), Dismiss (calls backend API), Click-to-navigate (auto-removes from tray)
+- "Clear all" button to remove all parked reminders at once
+- Closes on outside click
+
+**Props**: None (uses `useNotifications` and `useAuth` hooks)
+
+---
+
+### NotificationContext
+
+**Location**: `lib/context/NotificationContext.tsx`
+
+**Purpose**: Shared state for the notification tray parking system.
+
+**Provides via `useNotifications()` hook:**
+- `parkedReminders: ParkedReminder[]` — Current parked reminders array
+- `parkReminder(reminder)` — Add a reminder to the tray (deduplicates, caps at 20)
+- `removeParkedReminder(id)` — Remove a single reminder from the tray
+- `clearAllParked()` — Clear the entire tray
+
+**Key Types:**
+- `UnifiedReminder` — Shared interface for both follow-up and TODO reminders (used by ReminderBanner + NotificationTray)
+- `ParkedReminder` — Extends `UnifiedReminder` with `parkedAt` timestamp
+
+---
+
+### GracePeriodBanner Component
+
+**Location**: `app/components/GracePeriodBanner.tsx`
+
+**Purpose**: Displays a warning banner when a user's subscription is in a grace period after cancellation.
 
 ---
 
@@ -570,4 +642,4 @@ return step === "input" ? (
 
 ---
 
-**Last Updated**: February 19, 2026
+**Last Updated**: March 3, 2026

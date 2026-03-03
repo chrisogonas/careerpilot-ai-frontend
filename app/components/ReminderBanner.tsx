@@ -3,24 +3,12 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
+import { useNotifications, UnifiedReminder } from '@/lib/context/NotificationContext';
 import { Reminder, TodoReminder, SnoozeDuration } from '@/lib/types';
-
-// Unified wrapper so we can display both follow-up and TODO reminders
-interface UnifiedReminder {
-  id: string;
-  title: string;
-  subtitle: string;
-  source: 'follow_up' | 'todo';
-  sourceId?: string;  // applicationId for follow-up, todoId for todo
-  nextDate: string;
-  reminderType: string;
-  recurrenceInterval?: string;
-  emailEnabled: boolean;
-  emailSentAt?: string;
-}
 
 const POLL_INTERVAL = 60_000; // 60 seconds
 const CYCLE_INTERVAL = 6_000; // 6 seconds per reminder
+const AUTO_DISMISS_MS = 60_000; // Auto-park to notification tray after 60s
 
 // ---------------------------------------------------------------------------
 // Soft chime via Web Audio API (no external file needed)
@@ -82,6 +70,7 @@ export default function ReminderBanner() {
     getDueTodoReminders, snoozeTodoReminder, dismissTodoReminder, deleteTodoReminder,
     subscription, currentPlan,
   } = useAuth();
+  const { parkReminder, parkedReminders } = useNotifications();
   const router = useRouter();
 
   const [reminders, setReminders] = useState<UnifiedReminder[]>([]);
@@ -90,6 +79,11 @@ export default function ReminderBanner() {
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const snoozeRef = useRef<HTMLDivElement>(null);
   const prevReminderIdsRef = useRef<Set<string>>(new Set());
+
+  // Auto-dismiss tracking
+  const firstSeenRef = useRef<Map<string, number>>(new Map());
+  const parkedRemindersRef = useRef(parkedReminders);
+  parkedRemindersRef.current = parkedReminders;
 
   const isPaidPlan = subscription && currentPlan && currentPlan.name !== 'free' && ['active', 'trialing'].includes(subscription.status);
 
@@ -133,7 +127,26 @@ export default function ReminderBanner() {
 
       const fuItems: UnifiedReminder[] = (fuData.due_reminders || []).map(toUnifiedFollowUp);
       const tdItems: UnifiedReminder[] = (tdData.due_reminders || []).map(toUnifiedTodo);
-      const incoming = [...fuItems, ...tdItems];
+
+      // Filter out reminders already parked in the notification tray
+      const parkedIds = new Set(parkedRemindersRef.current.map(p => p.id));
+      const incoming = [...fuItems, ...tdItems].filter(r => !parkedIds.has(r.id));
+
+      // Track first-seen timestamps for auto-dismiss countdown
+      const now = Date.now();
+      incoming.forEach(r => {
+        if (!firstSeenRef.current.has(r.id)) {
+          firstSeenRef.current.set(r.id, now);
+        }
+      });
+      // Clean up stale first-seen entries
+      const incomingIds = new Set(incoming.map(r => r.id));
+      for (const id of firstSeenRef.current.keys()) {
+        if (!incomingIds.has(id)) {
+          firstSeenRef.current.delete(id);
+        }
+      }
+
       setReminders(incoming);
 
       // Play chime only when genuinely new reminders appear
@@ -154,6 +167,37 @@ export default function ReminderBanner() {
     const interval = setInterval(fetchReminders, POLL_INTERVAL);
     return () => clearInterval(interval);
   }, [fetchReminders]);
+
+  // Auto-dismiss: every second, park reminders that have been visible for 60s+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = Date.now();
+      setReminders(prev => {
+        const topark: UnifiedReminder[] = [];
+        const remaining: UnifiedReminder[] = [];
+
+        for (const r of prev) {
+          const firstSeen = firstSeenRef.current.get(r.id);
+          if (firstSeen && (now - firstSeen) >= AUTO_DISMISS_MS) {
+            topark.push(r);
+          } else {
+            remaining.push(r);
+          }
+        }
+
+        if (topark.length > 0) {
+          topark.forEach(r => {
+            parkReminder(r);
+            firstSeenRef.current.delete(r.id);
+          });
+          return remaining;
+        }
+        return prev;
+      });
+    }, 1_000);
+
+    return () => clearInterval(timer);
+  }, [parkReminder]);
 
   // Cycle through reminders
   useEffect(() => {
@@ -191,6 +235,7 @@ export default function ReminderBanner() {
       } else {
         await dismissTodoReminder(unified.sourceId!);
       }
+      firstSeenRef.current.delete(unified.id);
       setReminders((prev) => prev.filter((r) => r.id !== unified.id));
     } catch {
       // Silently fail
@@ -209,6 +254,7 @@ export default function ReminderBanner() {
       } else {
         await snoozeTodoReminder(unified.sourceId!, duration);
       }
+      firstSeenRef.current.delete(unified.id);
       setReminders((prev) => prev.filter((r) => r.id !== unified.id));
     } catch {
       // Silently fail
@@ -226,6 +272,7 @@ export default function ReminderBanner() {
       } else {
         await deleteTodoReminder(unified.sourceId!);
       }
+      firstSeenRef.current.delete(unified.id);
       setReminders((prev) => prev.filter((r) => r.id !== unified.id));
     } catch {
       // Silently fail
