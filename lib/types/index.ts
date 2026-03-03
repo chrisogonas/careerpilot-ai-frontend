@@ -456,6 +456,32 @@ export interface CreditPackCheckoutResponse {
   url: string;
 }
 
+// Email Quota Pack Types (one-time purchase)
+export interface EmailQuotaPack {
+  id: string;
+  name: string;
+  emails: number;
+  price_cents: number;
+  price_usd: number;
+  description: string;
+  popular: boolean;
+}
+
+export interface GetEmailQuotaPacksResponse {
+  packs: EmailQuotaPack[];
+}
+
+export interface EmailQuotaPackCheckoutPayload {
+  pack_id: string;
+  success_url: string;
+  cancel_url: string;
+}
+
+export interface EmailQuotaPackCheckoutResponse {
+  session_id: string;
+  url: string;
+}
+
 // Resume Library Types
 export interface Resume {
   id: string;

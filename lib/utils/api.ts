@@ -48,6 +48,8 @@ import {
   CreditPack,
   GetCreditPacksResponse,
   CreditPackCheckoutResponse,
+  GetEmailQuotaPacksResponse,
+  EmailQuotaPackCheckoutResponse,
   Resume,
   CreateResumePayload,
   CreateResumeResponse,
@@ -635,6 +637,37 @@ class ApiClient {
     );
 
     return this.handleResponse<CreditPackCheckoutResponse>(response);
+  }
+
+  // Email Quota Pack Endpoints (one-time purchase)
+  async getEmailQuotaPacks(): Promise<GetEmailQuotaPacksResponse> {
+    const response = await fetch(`${this.baseURL}/stripe/email-quota-packs`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    return this.handleResponse<GetEmailQuotaPacksResponse>(response);
+  }
+
+  async createEmailQuotaPackCheckout(
+    packId: string,
+    successUrl: string,
+    cancelUrl: string
+  ): Promise<EmailQuotaPackCheckoutResponse> {
+    const response = await fetch(
+      `${this.baseURL}/stripe/email-quota-packs/checkout`,
+      {
+        method: "POST",
+        headers: this.getHeaders(),
+        body: JSON.stringify({
+          pack_id: packId,
+          success_url: successUrl,
+          cancel_url: cancelUrl,
+        }),
+      }
+    );
+
+    return this.handleResponse<EmailQuotaPackCheckoutResponse>(response);
   }
 
   // Resume Library Endpoints
