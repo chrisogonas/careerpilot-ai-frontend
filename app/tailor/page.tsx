@@ -167,6 +167,25 @@ export default function TailorResumePage() {
       } catch (err) {
         console.error("Failed to fetch resumes:", err);
       }
+
+      // After loading resumes, apply any resume_prefill from an application detail page
+      if (typeof window !== "undefined") {
+        const raw = sessionStorage.getItem("resume_prefill");
+        if (raw) {
+          try {
+            const prefill = JSON.parse(raw);
+            if (prefill.resume_text) {
+              setResumeText(prefill.resume_text);
+              setSelectedResumeId(""); // deselect saved resumes since we're using snapshot text
+              setShowResumeText(true);  // show the pasted resume textarea
+            }
+            if (prefill.job_description) setJobDescription(prefill.job_description);
+            if (prefill.job_title) setTargetRole(prefill.job_title);
+            if (prefill.company_name) setCompanyName(prefill.company_name);
+          } catch {}
+          sessionStorage.removeItem("resume_prefill");
+        }
+      }
     };
 
     if (isAuthenticated) {

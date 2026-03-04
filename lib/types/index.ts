@@ -708,6 +708,9 @@ export interface Reminder {
   title: string;
   reminder_type: ReminderType;
   recurrence_interval?: RecurrenceInterval;
+  recurrence_end_date?: string;
+  recurrence_count?: number;
+  occurrence_number?: number;
   reminder_date: string;
   next_reminder_date: string;
   status: ReminderStatus;
@@ -732,6 +735,8 @@ export interface CreateReminderPayload {
   reminder_date: string;
   reminder_type?: ReminderType;
   recurrence_interval?: RecurrenceInterval;
+  recurrence_end_date?: string;
+  recurrence_count?: number;
   title?: string;
   email_enabled?: boolean;
   email_reminder_date?: string;
@@ -778,6 +783,9 @@ export interface TodoReminder {
   title: string;
   reminder_type: ReminderType;
   recurrence_interval?: RecurrenceInterval;
+  recurrence_end_date?: string;
+  recurrence_count?: number;
+  occurrence_number?: number;
   reminder_date: string;
   next_reminder_date: string;
   status: ReminderStatus;
@@ -830,6 +838,8 @@ export interface CreateTodoPayload {
     reminder_date: string;
     reminder_type?: ReminderType;
     recurrence_interval?: RecurrenceInterval;
+    recurrence_end_date?: string;
+    recurrence_count?: number;
     email_enabled?: boolean;
     email_reminder_date?: string;
   };
@@ -851,6 +861,8 @@ export interface CreateTodoReminderPayload {
   reminder_date: string;
   reminder_type?: ReminderType;
   recurrence_interval?: RecurrenceInterval;
+  recurrence_end_date?: string;
+  recurrence_count?: number;
   email_enabled?: boolean;
   email_reminder_date?: string;
 }

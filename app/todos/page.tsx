@@ -756,6 +756,8 @@ function TodoCard({
                   <p className="text-xs text-indigo-600 mt-0.5">
                     {todo.reminder.reminder_type === "recurring" ? "Recurring" : "One-time"}
                     {todo.reminder.recurrence_interval && ` (${todo.reminder.recurrence_interval.replace("_", " ")})`}
+                    {todo.reminder.recurrence_count && ` · ${todo.reminder.occurrence_number || 0}/${todo.reminder.recurrence_count} times`}
+                    {todo.reminder.recurrence_end_date && ` · ends ${new Date(todo.reminder.recurrence_end_date).toLocaleDateString()}`}
                     {" — "}
                     Next: {formatDateTime(todo.reminder.next_reminder_date)}
                   </p>
@@ -847,6 +849,13 @@ function TodoFormModal({ todo, onClose, onSave }: TodoFormModalProps) {
   const [recurrence, setRecurrence] = useState<RecurrenceInterval>(
     (todo?.reminder?.recurrence_interval as RecurrenceInterval) || "weekly",
   );
+  const [recurrenceEndMode, setRecurrenceEndMode] = useState<"never" | "count" | "date">(
+    todo?.reminder?.recurrence_count ? "count" : todo?.reminder?.recurrence_end_date ? "date" : "never",
+  );
+  const [recurrenceCount, setRecurrenceCount] = useState(todo?.reminder?.recurrence_count || 5);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState(
+    todo?.reminder?.recurrence_end_date ? todo.reminder.recurrence_end_date.split("T")[0] : "",
+  );
   const [emailEnabled, setEmailEnabled] = useState(todo?.reminder?.email_enabled || false);
 
   const handleSubmit = () => {
@@ -870,6 +879,8 @@ function TodoFormModal({ todo, onClose, onSave }: TodoFormModalProps) {
         reminder_date: new Date(reminderDate).toISOString(),
         reminder_type: reminderType,
         recurrence_interval: reminderType === "recurring" ? recurrence : undefined,
+        ...(reminderType === "recurring" && recurrenceEndMode === "count" ? { recurrence_count: recurrenceCount } : {}),
+        ...(reminderType === "recurring" && recurrenceEndMode === "date" && recurrenceEndDate ? { recurrence_end_date: new Date(recurrenceEndDate).toISOString() } : {}),
         email_enabled: emailEnabled,
       };
       // If creating new (not editing), include reminder inline
@@ -1086,6 +1097,49 @@ function TodoFormModal({ todo, onClose, onSave }: TodoFormModalProps) {
                       <option key={o.value} value={o.value}>{o.label}</option>
                     ))}
                   </select>
+                </div>
+              )}
+
+              {/* Recurrence End Condition */}
+              {reminderType === "recurring" && (
+                <div>
+                  <label className="block text-xs font-medium text-indigo-800 mb-1">Ends</label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="todoRecurrenceEnd" value="never" checked={recurrenceEndMode === "never"} onChange={() => setRecurrenceEndMode("never")} className="text-indigo-600 focus:ring-indigo-500" />
+                      <span className="text-sm text-indigo-800">Never</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="todoRecurrenceEnd" value="count" checked={recurrenceEndMode === "count"} onChange={() => setRecurrenceEndMode("count")} className="text-indigo-600 focus:ring-indigo-500" />
+                      <span className="text-sm text-indigo-800">After</span>
+                      {recurrenceEndMode === "count" && (
+                        <span className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={1}
+                            max={100}
+                            value={recurrenceCount}
+                            onChange={(e) => setRecurrenceCount(Math.max(1, parseInt(e.target.value) || 1))}
+                            className="w-16 px-2 py-1 text-sm border border-indigo-200 rounded focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none"
+                          />
+                          <span className="text-sm text-indigo-700">times</span>
+                        </span>
+                      )}
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="radio" name="todoRecurrenceEnd" value="date" checked={recurrenceEndMode === "date"} onChange={() => setRecurrenceEndMode("date")} className="text-indigo-600 focus:ring-indigo-500" />
+                      <span className="text-sm text-indigo-800">On date</span>
+                    </label>
+                    {recurrenceEndMode === "date" && (
+                      <input
+                        type="date"
+                        value={recurrenceEndDate}
+                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                        className="w-full border border-indigo-200 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ml-6"
+                        min={new Date().toISOString().split("T")[0]}
+                      />
+                    )}
+                  </div>
                 </div>
               )}
 

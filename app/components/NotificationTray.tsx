@@ -175,29 +175,14 @@ export default function NotificationTray() {
 
                   {/* Actions row */}
                   <div className="flex items-center gap-2 mt-2">
-                    {/* Snooze */}
-                    <div className="relative">
-                      <button
-                        onClick={() => setSnoozeOpenId(snoozeOpenId === reminder.id ? null : reminder.id)}
-                        disabled={actionLoading === reminder.id}
-                        className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded transition disabled:opacity-50"
-                      >
-                        Snooze
-                      </button>
-                      {snoozeOpenId === reminder.id && (
-                        <div className="absolute left-0 bottom-full mb-1 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50 min-w-[110px]">
-                          {SNOOZE_OPTIONS.map((opt) => (
-                            <button
-                              key={opt.value}
-                              onClick={() => handleSnooze(reminder, opt.value)}
-                              className="w-full text-left px-3 py-1.5 text-xs text-gray-700 hover:bg-amber-50 transition"
-                            >
-                              {opt.label}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                    {/* Snooze toggle */}
+                    <button
+                      onClick={() => setSnoozeOpenId(snoozeOpenId === reminder.id ? null : reminder.id)}
+                      disabled={actionLoading === reminder.id}
+                      className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded transition disabled:opacity-50"
+                    >
+                      {snoozeOpenId === reminder.id ? 'Cancel' : 'Snooze'}
+                    </button>
 
                     {/* Dismiss */}
                     <button
@@ -208,6 +193,21 @@ export default function NotificationTray() {
                       Dismiss
                     </button>
                   </div>
+
+                  {/* Inline snooze duration picker — renders in normal flow so it's never clipped */}
+                  {snoozeOpenId === reminder.id && (
+                    <div className="flex flex-wrap gap-1.5 mt-2 pt-2 border-t border-gray-100">
+                      {SNOOZE_OPTIONS.map((opt) => (
+                        <button
+                          key={opt.value}
+                          onClick={() => handleSnooze(reminder, opt.value)}
+                          className="px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded transition"
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))
             )}

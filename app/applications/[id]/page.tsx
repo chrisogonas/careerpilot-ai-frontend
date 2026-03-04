@@ -38,6 +38,9 @@ function ApplicationDetailContent() {
   const [reminderDate, setReminderDate] = useState("");
   const [reminderType, setReminderType] = useState<ReminderType>("once");
   const [recurrenceInterval, setRecurrenceInterval] = useState<RecurrenceInterval>("weekly");
+  const [recurrenceEndMode, setRecurrenceEndMode] = useState<"never" | "count" | "date">("never");
+  const [recurrenceCount, setRecurrenceCount] = useState(5);
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState("");
 
   // Email reminder fields
   const [emailReminderEnabled, setEmailReminderEnabled] = useState(false);
@@ -57,6 +60,9 @@ function ApplicationDetailContent() {
   const [customEmailDate, setCustomEmailDate] = useState("");
 
   const isPaidPlan = subscription && currentPlan && currentPlan.name !== "free" && ["active", "trialing"].includes(subscription.status);
+
+  // Ref for scrolling to the follow-up form from the Actions card
+  const followUpSectionRef = useRef<HTMLDivElement>(null);
 
   // Use a ref for getApplication to avoid it being a useEffect dependency
   const getApplicationRef = useRef(getApplication);
@@ -215,6 +221,8 @@ function ApplicationDetailContent() {
             reminder_date: computedReminderDate,
             reminder_type: reminderType,
             ...(reminderType === "recurring" ? { recurrence_interval: recurrenceInterval } : {}),
+            ...(reminderType === "recurring" && recurrenceEndMode === "count" ? { recurrence_count: recurrenceCount } : {}),
+            ...(reminderType === "recurring" && recurrenceEndMode === "date" && recurrenceEndDate ? { recurrence_end_date: new Date(recurrenceEndDate).toISOString() } : {}),
             ...(emailReminderEnabled ? { email_enabled: true, email_reminder_date: computedEmailDate } : {}),
           };
           await createReminder(reminderPayload);
@@ -244,6 +252,9 @@ function ApplicationDetailContent() {
       setReminderDate("");
       setReminderType("once");
       setRecurrenceInterval("weekly");
+      setRecurrenceEndMode("never");
+      setRecurrenceCount(5);
+      setRecurrenceEndDate("");
       setReminderTimingMode("at_event");
       setReminderBeforeAmount(1);
       setReminderBeforeUnit("days");
@@ -566,7 +577,7 @@ function ApplicationDetailContent() {
             </div>
 
             {/* Follow-ups Section */}
-            <div className="bg-white rounded-lg shadow p-6 border border-slate-200">
+            <div ref={followUpSectionRef} className="bg-white rounded-lg shadow p-6 border border-slate-200">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-slate-900">Follow-ups ({followUps.length})</h2>
                 <button
@@ -763,6 +774,49 @@ function ApplicationDetailContent() {
                                     <option value="biweekly">Biweekly</option>
                                     <option value="monthly">Monthly</option>
                                   </select>
+                                </div>
+                              )}
+
+                              {/* Recurrence End Condition */}
+                              {reminderType === "recurring" && (
+                                <div>
+                                  <label className="block text-sm font-medium text-slate-700 mb-1">Ends</label>
+                                  <div className="space-y-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name="recurrenceEnd" value="never" checked={recurrenceEndMode === "never"} onChange={() => setRecurrenceEndMode("never")} className="text-blue-600 focus:ring-blue-500" />
+                                      <span className="text-sm text-slate-700">Never</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name="recurrenceEnd" value="count" checked={recurrenceEndMode === "count"} onChange={() => setRecurrenceEndMode("count")} className="text-blue-600 focus:ring-blue-500" />
+                                      <span className="text-sm text-slate-700">After</span>
+                                      {recurrenceEndMode === "count" && (
+                                        <span className="flex items-center gap-1">
+                                          <input
+                                            type="number"
+                                            min={1}
+                                            max={100}
+                                            value={recurrenceCount}
+                                            onChange={(e) => setRecurrenceCount(Math.max(1, parseInt(e.target.value) || 1))}
+                                            className="w-16 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                          />
+                                          <span className="text-sm text-slate-600">times</span>
+                                        </span>
+                                      )}
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name="recurrenceEnd" value="date" checked={recurrenceEndMode === "date"} onChange={() => setRecurrenceEndMode("date")} className="text-blue-600 focus:ring-blue-500" />
+                                      <span className="text-sm text-slate-700">On date</span>
+                                    </label>
+                                    {recurrenceEndMode === "date" && (
+                                      <input
+                                        type="date"
+                                        value={recurrenceEndDate}
+                                        onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                                        className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm ml-6"
+                                        min={new Date().toISOString().split("T")[0]}
+                                      />
+                                    )}
+                                  </div>
                                 </div>
                               )}
 
@@ -1004,17 +1058,41 @@ function ApplicationDetailContent() {
               <h3 className="font-bold text-slate-900 mb-4">Actions</h3>
               <div className="space-y-2">
                 <button
-                  onClick={() => setIsAddingFollowUp(true)}
+                  onClick={() => {
+                    setIsAddingFollowUp(true);
+                    setTimeout(() => followUpSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+                  }}
                   className="w-full px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 font-semibold rounded-lg transition"
                 >
                   Add Follow-up
                 </button>
-                <Link
-                  href={`/tailor?job_id=${applicationId}`}
-                  className="block px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold rounded-lg transition text-center"
-                >
-                  Tailor Resume
-                </Link>
+                {application.applied_resume_text ? (
+                  <button
+                    onClick={() => {
+                      sessionStorage.setItem(
+                        "resume_prefill",
+                        JSON.stringify({
+                          resume_text: application.applied_resume_text,
+                          resume_title: application.applied_resume_title || "Untitled Resume",
+                          job_title: application.job_title || "",
+                          company_name: application.company_name || "",
+                          job_description: application.job_description || "",
+                        })
+                      );
+                      router.push("/tailor");
+                    }}
+                    className="w-full px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold rounded-lg transition text-center"
+                  >
+                    Re-tailor for Similar Job
+                  </button>
+                ) : (
+                  <Link
+                    href="/tailor"
+                    className="block px-4 py-2 bg-amber-100 hover:bg-amber-200 text-amber-700 font-semibold rounded-lg transition text-center"
+                  >
+                    Tailor Resume
+                  </Link>
+                )}
               </div>
             </div>
           </div>

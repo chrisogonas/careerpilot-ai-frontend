@@ -102,6 +102,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } finally {
         setIsLoading(false);
       }
+
+      // Load subscription data silently so global components (e.g. ReminderBanner)
+      // have isPaidPlan available immediately, without waiting for a specific page
+      // to call getSubscription(). Fire-and-forget — failures are fine.
+      if (localStorage.getItem("careerpilot_token")) {
+        apiClient.getSubscription().then(data => {
+          setSubscription(data.subscription);
+          setCurrentPlan(data.current_plan);
+        }).catch(() => {});
+      }
     };
 
     checkAuth();

@@ -38,8 +38,28 @@ const NotificationContext = createContext<NotificationContextType>({
   clearAllParked: () => {},
 });
 
+const STORAGE_KEY = 'careerpilot_parked_reminders';
+
+function loadParked(): ParkedReminder[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveParked(items: ParkedReminder[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  } catch {
+    // quota exceeded or SSR — ignore
+  }
+}
+
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [parkedReminders, setParkedReminders] = useState<ParkedReminder[]>([]);
+  const [parkedReminders, setParkedReminders] = useState<ParkedReminder[]>(loadParked);
 
   const parkReminder = useCallback((reminder: UnifiedReminder) => {
     setParkedReminders(prev => {
@@ -47,16 +67,23 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       if (prev.some(p => p.id === reminder.id)) return prev;
       const updated = [{ ...reminder, parkedAt: Date.now() }, ...prev];
       // Cap at MAX_PARKED — oldest (last) ejected
-      return updated.slice(0, MAX_PARKED);
+      const capped = updated.slice(0, MAX_PARKED);
+      saveParked(capped);
+      return capped;
     });
   }, []);
 
   const removeParkedReminder = useCallback((id: string) => {
-    setParkedReminders(prev => prev.filter(p => p.id !== id));
+    setParkedReminders(prev => {
+      const updated = prev.filter(p => p.id !== id);
+      saveParked(updated);
+      return updated;
+    });
   }, []);
 
   const clearAllParked = useCallback(() => {
     setParkedReminders([]);
+    saveParked([]);
   }, []);
 
   return (

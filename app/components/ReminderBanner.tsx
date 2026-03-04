@@ -118,10 +118,13 @@ export default function ReminderBanner() {
   });
 
   const fetchReminders = useCallback(async () => {
-    if (!isAuthenticated || !isPaidPlan) return;
+    if (!isAuthenticated) return;
     try {
+      // TODO reminders are available to ALL plans; follow-up reminders are paid-only
       const [fuData, tdData] = await Promise.all([
-        getDueReminders().catch(() => ({ due_reminders: [] })),
+        isPaidPlan
+          ? getDueReminders().catch(() => ({ due_reminders: [] }))
+          : Promise.resolve({ due_reminders: [] as Reminder[] }),
         getDueTodoReminders().catch(() => ({ due_reminders: [] })),
       ]);
 
@@ -169,31 +172,35 @@ export default function ReminderBanner() {
   }, [fetchReminders]);
 
   // Auto-dismiss: every second, park reminders that have been visible for 60s+
+  // We split the work into two phases so parkReminder (which sets state in
+  // NotificationProvider) is never called *inside* the setReminders updater —
+  // React forbids setting state on another component during a state update.
   useEffect(() => {
     const timer = setInterval(() => {
       const now = Date.now();
+      const topark: UnifiedReminder[] = [];
+
+      // Phase 1: identify & remove expired reminders from the banner list
       setReminders(prev => {
-        const topark: UnifiedReminder[] = [];
         const remaining: UnifiedReminder[] = [];
 
         for (const r of prev) {
           const firstSeen = firstSeenRef.current.get(r.id);
           if (firstSeen && (now - firstSeen) >= AUTO_DISMISS_MS) {
             topark.push(r);
+            firstSeenRef.current.delete(r.id);
           } else {
             remaining.push(r);
           }
         }
 
-        if (topark.length > 0) {
-          topark.forEach(r => {
-            parkReminder(r);
-            firstSeenRef.current.delete(r.id);
-          });
-          return remaining;
-        }
-        return prev;
+        return topark.length > 0 ? remaining : prev;
       });
+
+      // Phase 2: park the collected reminders *after* setReminders completes
+      if (topark.length > 0) {
+        topark.forEach(r => parkReminder(r));
+      }
     }, 1_000);
 
     return () => clearInterval(timer);
