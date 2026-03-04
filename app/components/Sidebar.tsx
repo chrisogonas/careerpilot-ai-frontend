@@ -2,8 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
+import logoSrc from '@/app/assets/logo/career.pilot.ai.icon.png';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Navigation items organised into groups
@@ -131,8 +133,16 @@ export default function Sidebar() {
           )}
         </button>
 
-        <Link href="/" className="ml-3 text-xl font-bold text-blue-600 truncate">
-          CareerPilot AI
+        <Link href="/" className="ml-3 flex items-center gap-2 truncate">
+          <Image
+            src={logoSrc}
+            alt="CareerPilot AI logo"
+            width={44}
+            height={44}
+            className="rounded-full"
+            priority
+          />
+          <span className="text-xl font-bold text-blue-600">CareerPilot AI</span>
         </Link>
 
         {/* Right side — user info on desktop */}
