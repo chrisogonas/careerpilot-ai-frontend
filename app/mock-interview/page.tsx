@@ -127,6 +127,10 @@ export default function MockInterviewPage() {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // ── Ref to always track latest currentAnswer for speech recognition ────
+  const currentAnswerRef = useRef(currentAnswer);
+  useEffect(() => { currentAnswerRef.current = currentAnswer; }, [currentAnswer]);
+
   // ── Speech helpers ────────────────────────────────────────────────────────
 
   const speak = useCallback((text: string) => {
@@ -151,7 +155,7 @@ export default function MockInterviewPage() {
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
-    let finalTranscript = currentAnswer;
+    let finalTranscript = currentAnswerRef.current;
     recognition.onresult = (event: any) => {
       let interim = "";
       for (let i = event.resultIndex; i < event.results.length; ++i) {
@@ -168,7 +172,7 @@ export default function MockInterviewPage() {
     recognition.start();
     recognitionRef.current = recognition;
     setIsListening(true);
-  }, [currentAnswer]);
+  }, []);
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();

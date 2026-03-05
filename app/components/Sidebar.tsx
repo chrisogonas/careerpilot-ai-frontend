@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
 import logoSrc from '@/app/assets/logo/career.pilot.ai.icon.png';
 
@@ -32,6 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Tailor Resume', href: '/tailor', icon: '✂️', authOnly: true },
       { label: 'My Resumes', href: '/resumes', icon: '📄', authOnly: true },
       { label: 'Applications', href: '/applications', icon: '💼', authOnly: true },
+      { label: 'Job Search', href: '/jobs/search', icon: '🔍', authOnly: true },
       { label: 'Mock Interview', href: '/mock-interview', icon: '🎤', authOnly: true },
       { label: 'My TODOs', href: '/todos', icon: '📋', authOnly: true },
     ],
@@ -88,7 +89,6 @@ const ADMIN_GROUP: NavGroup = {
 
 export default function Sidebar() {
   const { user, isAuthenticated, logout } = useAuth();
-  const router = useRouter();
   const pathname = usePathname();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -132,13 +132,8 @@ export default function Sidebar() {
   }, [isOpen]);
 
   const handleLogout = async () => {
-    try {
-      await logout();
-      setIsOpen(false);
-      router.push('/');
-    } catch (err) {
-      console.error('Logout failed:', err);
-    }
+    setIsOpen(false);
+    await logout();
   };
 
   const isActive = (href: string) =>

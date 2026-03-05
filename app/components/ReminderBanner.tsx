@@ -244,8 +244,11 @@ export default function ReminderBanner() {
       }
       firstSeenRef.current.delete(unified.id);
       setReminders((prev) => prev.filter((r) => r.id !== unified.id));
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error('Dismiss failed:', err);
+      // Optimistic: still remove so user isn't stuck
+      firstSeenRef.current.delete(unified.id);
+      setReminders((prev) => prev.filter((r) => r.id !== unified.id));
     } finally {
       setActionLoading(null);
     }
@@ -263,8 +266,10 @@ export default function ReminderBanner() {
       }
       firstSeenRef.current.delete(unified.id);
       setReminders((prev) => prev.filter((r) => r.id !== unified.id));
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error('Snooze failed:', err);
+      firstSeenRef.current.delete(unified.id);
+      setReminders((prev) => prev.filter((r) => r.id !== unified.id));
     } finally {
       setActionLoading(null);
     }
@@ -281,8 +286,10 @@ export default function ReminderBanner() {
       }
       firstSeenRef.current.delete(unified.id);
       setReminders((prev) => prev.filter((r) => r.id !== unified.id));
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error('Delete failed:', err);
+      firstSeenRef.current.delete(unified.id);
+      setReminders((prev) => prev.filter((r) => r.id !== unified.id));
     } finally {
       setActionLoading(null);
     }

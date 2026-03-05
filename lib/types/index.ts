@@ -1501,6 +1501,84 @@ export interface InterviewEndResponse {
   credits_remaining: number;
 }
 
+// ============================================================================
+// Job Board Search Types
+// ============================================================================
+
+export interface JobSearchRequest {
+  query: string;
+  location?: string;
+  page?: number;
+  num_pages?: number;
+  date_posted?: string;       // all | today | 3days | week | month
+  employment_type?: string;   // FULLTIME | PARTTIME | CONTRACTOR | INTERN
+  remote_only?: boolean;
+}
+
+export interface JobSearchResultItem {
+  job_id: string;
+  title: string;
+  company: string;
+  location: string;
+  description: string;
+  employment_type?: string;
+  date_posted?: string;
+  apply_link?: string;
+  source?: string;            // Indeed | LinkedIn | Glassdoor | …
+  salary_min?: number;
+  salary_max?: number;
+  salary_currency?: string;
+  salary_period?: string;     // yearly | monthly | hourly
+  is_remote: boolean;
+  company_logo?: string;
+  company_url?: string;
+}
+
+export interface JobSearchResponse {
+  results: JobSearchResultItem[];
+  total_results: number;
+  page: number;
+  credits_remaining: number;
+  cached: boolean;
+}
+
+export interface SaveJobSearchRequest {
+  query: string;
+  location?: string;
+  date_posted?: string;
+  employment_type?: string;
+  remote_only?: boolean;
+  results_count?: number;
+}
+
+export interface SavedJobSearch {
+  id: string;
+  query: string;
+  location?: string;
+  date_posted?: string;
+  employment_type?: string;
+  remote_only: boolean;
+  results_count?: number;
+  created_at: string;
+}
+
+export interface SavedJobSearchListResponse {
+  searches: SavedJobSearch[];
+}
+
+export interface SaveJobAsApplicationRequest {
+  job_id: string;
+  title: string;
+  company: string;
+  location?: string;
+  apply_link?: string;
+  description?: string;
+  salary_min?: number;
+  salary_max?: number;
+  employment_type?: string;
+  source?: string;
+}
+
 // Auth Context Types
 export interface AuthContextType {
   user: User | null;

@@ -127,6 +127,11 @@ import {
   InterviewEndResponse,
   InterviewSessionOut,
   InterviewSessionSummary,
+  JobSearchRequest,
+  JobSearchResponse,
+  SaveJobSearchRequest,
+  SavedJobSearchListResponse,
+  SaveJobAsApplicationRequest,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -1576,6 +1581,53 @@ class ApiClient {
       headers: this.getHeaders(),
     });
     await this.handleResponse(response);
+  }
+
+  // ============================================================================
+  // JOB BOARD SEARCH ENDPOINTS
+  // ============================================================================
+
+  async searchJobs(payload: JobSearchRequest): Promise<JobSearchResponse> {
+    const response = await fetch(`${this.baseURL}/jobs/search`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<JobSearchResponse>(response);
+  }
+
+  async getSavedSearches(): Promise<SavedJobSearchListResponse> {
+    const response = await fetch(`${this.baseURL}/jobs/search/saved`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<SavedJobSearchListResponse>(response);
+  }
+
+  async saveJobSearch(payload: SaveJobSearchRequest): Promise<{ id: string; message: string }> {
+    const response = await fetch(`${this.baseURL}/jobs/search/save`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<{ id: string; message: string }>(response);
+  }
+
+  async deleteSavedSearch(searchId: string): Promise<{ message: string }> {
+    const response = await fetch(`${this.baseURL}/jobs/search/saved/${searchId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ message: string }>(response);
+  }
+
+  async saveJobAsApplication(payload: SaveJobAsApplicationRequest): Promise<{ application_id: string; message: string }> {
+    const response = await fetch(`${this.baseURL}/jobs/search/save-application`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<{ application_id: string; message: string }>(response);
   }
 }
 

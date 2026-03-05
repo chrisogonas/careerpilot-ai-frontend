@@ -2,9 +2,9 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
 import { TailorResponse, Resume, CoverLetterResponse, StarStoryResponse } from "@/lib/types";
 
@@ -17,7 +17,7 @@ interface ResumeInputError {
   message: string;
 }
 
-export default function TailorResumePage() {
+function TailorResumeContent() {
   const { user, isAuthenticated, isLoading: authLoading, getResumes } = useAuth();
 
   // Helper: strip CUSTOMIZATION EXPLANATION / GAP ANALYSIS from tailored resume text
@@ -154,6 +154,9 @@ export default function TailorResumePage() {
     return elements;
   };
 
+  // ── Read URL search params for cross-tab prefill (e.g. from Job Search) ──
+  const searchParams = useSearchParams();
+
   // Fetch saved resumes on mount
   useEffect(() => {
     const fetchResumes = async () => {
@@ -186,6 +189,16 @@ export default function TailorResumePage() {
           sessionStorage.removeItem("resume_prefill");
         }
       }
+
+      // Apply URL search‑param prefill (cross-tab, e.g. from Job Search page)
+      const qDesc  = searchParams.get("jobDescription");
+      const qTitle = searchParams.get("jobTitle");
+      const qCompany = searchParams.get("companyName");
+      const qUrl   = searchParams.get("jobUrl");
+      if (qDesc)    setJobDescription(qDesc);
+      if (qTitle)   setTargetRole(qTitle);
+      if (qCompany) setCompanyName(qCompany);
+      if (qUrl)     setJobUrl(qUrl);
     };
 
     if (isAuthenticated) {
@@ -1381,5 +1394,13 @@ export default function TailorResumePage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function TailorResumePage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen text-gray-500">Loading…</div>}>
+      <TailorResumeContent />
+    </Suspense>
   );
 }

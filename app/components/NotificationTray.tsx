@@ -68,8 +68,10 @@ export default function NotificationTray() {
         await snoozeTodoReminder(reminder.sourceId!, duration);
       }
       removeParkedReminder(reminder.id);
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error('Snooze failed:', err);
+      // Optimistic: still remove from tray; next poll will re-park if backend didn't persist
+      removeParkedReminder(reminder.id);
     } finally {
       setActionLoading(null);
     }
@@ -85,8 +87,9 @@ export default function NotificationTray() {
         await dismissTodoReminder(reminder.sourceId!);
       }
       removeParkedReminder(reminder.id);
-    } catch {
-      // Silently fail
+    } catch (err) {
+      console.error('Dismiss failed:', err);
+      removeParkedReminder(reminder.id);
     } finally {
       setActionLoading(null);
     }

@@ -948,13 +948,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setError(null);
     try {
       await apiClient.logout();
-      setUser(null);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Logout failed";
-      setError(message);
-      throw err;
-    } finally {
-      setIsLoading(false);
+    } catch {
+      // best-effort — always clear local state even if API call fails
+    }
+    setUser(null);
+    localStorage.removeItem("careerpilot_token");
+    localStorage.removeItem("careerpilot_refresh_token");
+    setIsLoading(false);
+    // Redirect to landing page
+    if (typeof window !== "undefined") {
+      window.location.href = "/";
     }
   };
 

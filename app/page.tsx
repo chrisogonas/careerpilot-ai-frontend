@@ -12,24 +12,29 @@ export default function Home() {
       {/* Hero Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-20">
         <div className="text-center max-w-4xl mx-auto">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-6">
+            ✨ AI-Powered Career Platform — from search to offer
+          </div>
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
             Your AI-Powered{" "}
             <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
               Career Advancement
-            </span>
+            </span>{" "}
+            Platform
           </h1>
           <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-            Get your resume tailored, cover letters written, and interview stories
-            prepared—all with AI. Land more interviews in less time.
+            Search jobs across Indeed, LinkedIn &amp; Glassdoor. Tailor your resume,
+            generate cover letters, practice with AI mock interviews, and track
+            every application — all in one place.
           </p>
 
           {!isAuthenticated ? (
             <div className="flex gap-4 justify-center">
               <Link
                 href="/auth/register"
-                className="px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+                className="px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/25"
               >
-                Start Free →
+                Start Free — 60 Credits →
               </Link>
               <Link
                 href="/auth/login"
@@ -41,34 +46,51 @@ export default function Home() {
           ) : (
             <Link
               href="/dashboard"
-              className="inline-block px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition"
+              className="inline-block px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition shadow-lg shadow-blue-600/25"
             >
               Go to Dashboard →
             </Link>
           )}
+
+          {/* Trust bar */}
+          <p className="mt-6 text-sm text-gray-400">
+            No credit card required &bull; 60 free monthly credits &bull; Cancel anytime
+          </p>
         </div>
 
         {/* Features */}
-        <div className="mt-32 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+        <div className="mt-28 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <FeatureCard
+            icon="🔍"
+            title="Job Board Search"
+            description="Search Indeed, LinkedIn, Glassdoor & more from one place. Save searches and add jobs straight to your tracker."
+            badge="New"
+          />
           <FeatureCard
             icon="📄"
-            title="Resume Tailoring"
-            description="AI-optimized resume bullets aligned with job descriptions"
+            title="AI Resume Tailoring"
+            description="Paste a job description and get your resume rewritten with the right keywords, skills & ATS-friendly formatting."
           />
           <FeatureCard
             icon="✍️"
-            title="Cover Letters"
-            description="Personalized cover letters tailored to companies and roles"
+            title="Cover Letter Generator"
+            description="Personalized cover letters crafted for each company and role — matching your tone and experience."
+          />
+          <FeatureCard
+            icon="🎙️"
+            title="AI Mock Interviews"
+            description="Practice with an AI interviewer via text or voice. Get real-time feedback, scores & detailed improvement tips."
+            badge="New"
           />
           <FeatureCard
             icon="⭐"
-            title="STAR Stories"
-            description="Interview prep stories based on your experience"
+            title="STAR Story Builder"
+            description="Generate polished behavioral interview stories from your experience using the STAR method."
           />
           <FeatureCard
-            icon="🔍"
-            title="Job Analysis"
-            description="Extract key requirements from job descriptions"
+            icon="📋"
+            title="Application Tracker"
+            description="Track every job application in one dashboard — status, notes, deadlines & quick access to tailor or prep."
           />
         </div>
       </div>
@@ -76,24 +98,32 @@ export default function Home() {
       {/* How It Works */}
       <div className="bg-white py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-16">
+          <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
             How It Works
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <p className="text-center text-gray-600 text-lg mb-16 max-w-2xl mx-auto">
+            From finding the right job to acing the interview — CareerPilot covers every step
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             <Step
               number="1"
-              title="Upload Your Resume"
-              description="Share your current resume and paste a job description"
+              title="Find Jobs"
+              description="Search across major job boards or paste a job URL to get started instantly"
             />
             <Step
               number="2"
-              title="AI Analyzes"
-              description="Our AI extracts requirements and optimizes your fit"
+              title="Tailor & Apply"
+              description="AI rewrites your resume & cover letter to match each job description perfectly"
             />
             <Step
               number="3"
-              title="Get Results"
-              description="Receive tailored resume, cover letter, and interview prep"
+              title="Prepare"
+              description="Practice with AI mock interviews and build STAR stories for behavioral questions"
+            />
+            <Step
+              number="4"
+              title="Track & Land It"
+              description="Track all your applications in one place and stay on top of every opportunity"
             />
           </div>
         </div>
@@ -112,9 +142,11 @@ export default function Home() {
               features={[
                 "60 monthly credits",
                 "3 resumes",
-                "Basic resume tailoring",
-                "Basic job analysis",
+                "Resume tailoring",
+                "Job analysis",
                 "STAR story generation",
+                "5 free job searches",
+                "Application tracker",
                 "Community support",
               ]}
               ctaLink="/auth/register"
@@ -127,9 +159,11 @@ export default function Home() {
                 "20 resumes",
                 "Advanced resume tailoring",
                 "Cover letter generation",
+                "AI mock interviews",
+                "Unlimited job board search",
                 "STAR story generation",
+                "Application tracker",
                 "Priority support",
-                "Save 20% with annual billing",
               ]}
               highlighted
               ctaLink="/subscribe"
@@ -142,10 +176,12 @@ export default function Home() {
                 "Unlimited resumes",
                 "Unlimited resume tailoring",
                 "Cover letter generation",
+                "AI mock interviews",
+                "Unlimited job board search",
                 "STAR story generation",
                 "Advanced analytics",
+                "Application tracker",
                 "Dedicated support",
-                "Save 20% with annual billing",
               ]}
               ctaLink="/subscribe"
             />
@@ -196,7 +232,15 @@ export default function Home() {
           <div className="space-y-4">
             <FAQItem
               question="How does AI resume tailoring work?"
-              answer="Our AI analyzes job descriptions and compares them with your resume. It identifies missing keywords, skills, and experience that match what recruiters are looking for, then provides specific optimization suggestions."
+              answer="Our AI analyzes job descriptions and compares them with your resume. It identifies missing keywords, skills, and experience that match what recruiters are looking for, then rewrites your resume with ATS-friendly formatting and targeted bullet points."
+            />
+            <FAQItem
+              question="How does the Job Board Search work?"
+              answer="CareerPilot searches across Indeed, LinkedIn, Glassdoor and other major job boards simultaneously using the JSearch API. You can filter by date, employment type, remote status, and location. Save searches for later, save jobs to your application tracker, or jump straight into tailoring your resume for a specific listing."
+            />
+            <FAQItem
+              question="What are AI Mock Interviews?"
+              answer="Our AI interviewer conducts realistic mock interviews based on the job you're targeting. Choose text or voice mode — the AI asks tailored questions, evaluates your answers in real time, and provides a detailed scorecard with feedback on content, communication, and areas to improve."
             />
             <FAQItem
               question="Will my resume work with Applicant Tracking Systems (ATS)?"
@@ -208,19 +252,19 @@ export default function Home() {
             />
             <FAQItem
               question="How do credits work?"
-              answer="Credits are the currency for AI-powered features. Job analysis costs 1 credit, resume tailoring costs 2 credits, cover letter generation costs 2 credits, and STAR story generation costs 1 credit. Your remaining credits are calculated dynamically based on your total budget minus actual usage this month. Free plan users get 60 monthly credits; paid plans get their respective allotment plus any purchased credit packs."
+              answer="Credits are the currency for AI-powered features. Job analysis costs 1 credit, resume tailoring costs 5 credits, cover letter generation costs 2 credits, STAR story generation costs 3 credits, mock interviews cost 5 credits, and job searches cost 1 credit. Free plan users get 60 monthly credits; paid plans get their respective allotment plus any purchased credit packs."
             />
             <FAQItem
               question="What can I do on the Free plan?"
-              answer="The Free plan includes 60 monthly credits, up to 3 resumes, resume tailoring, job analysis, and STAR story generation. It's perfect for testing the platform. Note: cover letter generation requires a Pro or Premium subscription. Important: free plan credits are only available if you have no active subscription or purchased credit packs."
+              answer="The Free plan includes 60 monthly credits, up to 3 resumes, resume tailoring, job analysis, STAR story generation, 5 free job searches, and the application tracker. It's perfect for testing the platform. Note: cover letter generation and AI mock interviews require a Pro or Premium subscription."
             />
             <FAQItem
               question="Which features require a paid subscription?"
-              answer="Cover letter generation is exclusive to Pro and Premium subscribers. All other features — resume tailoring, job analysis, and STAR story generation — are available on every plan including Free, as long as you have credits."
+              answer="Cover letter generation and AI mock interviews are exclusive to Pro and Premium subscribers. All other features — resume tailoring, job analysis, STAR story generation, job board search, and the application tracker — are available on every plan including Free, as long as you have credits."
             />
             <FAQItem
               question="What are credit packs?"
-              answer="Credit packs are one-time purchases (200, 400, or 700 credits) that add credits to your account instantly. Purchased credits are valid for 60 days and work alongside any subscription plan. If you buy another pack before your credits expire, the expiry window is extended. Note: if you are on the Free plan and purchase a credit pack, your free monthly credits are forfeited and only your purchased credits will be available."
+              answer="Credit packs are one-time purchases (200, 400, or 700 credits) that add credits to your account instantly. Purchased credits are valid for 60 days and work alongside any subscription plan. If you buy another pack before your credits expire, the expiry window is extended."
             />
             <FAQItem
               question="Do you offer annual billing?"
@@ -229,10 +273,6 @@ export default function Home() {
             <FAQItem
               question="Can I cancel or change my plan anytime?"
               answer="Absolutely. You can upgrade, downgrade, or cancel your plan at any time with no contracts or cancellation fees. Your access continues until the end of your current billing period."
-            />
-            <FAQItem
-              question="Do you offer a refund if I'm not satisfied?"
-              answer="Yes, we offer a 30-day money-back guarantee on all paid subscriptions. If you're not satisfied, contact our support team for a full refund."
             />
             <FAQItem
               question="Is my data secure?"
@@ -299,14 +339,14 @@ export default function Home() {
             Ready to advance your career?
           </h2>
           <p className="text-blue-100 mb-8 text-lg">
-            Join thousands using CareerPilot to land their dream jobs
+            Search jobs, tailor your resume, prep for interviews, and track it all — powered by AI
           </p>
           {!isAuthenticated && (
             <Link
               href="/auth/register"
-              className="inline-block px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition"
+              className="inline-block px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition shadow-lg"
             >
-              Get Started Free →
+              Get Started Free — No Credit Card →
             </Link>
           )}
         </div>
@@ -319,13 +359,20 @@ function FeatureCard({
   icon,
   title,
   description,
+  badge,
 }: {
   icon: string;
   title: string;
   description: string;
+  badge?: string;
 }) {
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+    <div className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+      {badge && (
+        <span className="absolute -top-2.5 right-4 bg-emerald-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
+          {badge}
+        </span>
+      )}
       <div className="text-4xl mb-4">{icon}</div>
       <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
       <p className="text-gray-600">{description}</p>
