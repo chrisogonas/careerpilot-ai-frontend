@@ -276,7 +276,7 @@ export default function SubscribePage() {
                     )}
 
                     <div className="text-center">
-                      <h3 className="text-xl font-bold mb-2">{pack.name}</h3>
+                      <h3 className="text-xl font-bold mb-2">{pack.credits.toLocaleString()} Credits</h3>
                       <div className="mb-4">
                         <span className="text-4xl font-bold">${pack.price_usd}</span>
                         <span className="text-gray-500 ml-1">one-time</span>

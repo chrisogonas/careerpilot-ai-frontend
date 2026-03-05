@@ -14,6 +14,7 @@ function authResponseToUser(response: AuthResponse): User {
     email: response.email,
     full_name: response.full_name,
     is_verified: "verified",
+    is_admin: response.is_admin ?? false,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -80,6 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               email: profile.email,
               full_name: profile.full_name,
               is_verified: "verified",
+              is_admin: profile.is_admin ?? false,
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             });

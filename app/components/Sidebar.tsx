@@ -32,6 +32,7 @@ const NAV_GROUPS: NavGroup[] = [
       { label: 'Tailor Resume', href: '/tailor', icon: '✂️', authOnly: true },
       { label: 'My Resumes', href: '/resumes', icon: '📄', authOnly: true },
       { label: 'Applications', href: '/applications', icon: '💼', authOnly: true },
+      { label: 'Mock Interview', href: '/mock-interview', icon: '🎤', authOnly: true },
       { label: 'My TODOs', href: '/todos', icon: '📋', authOnly: true },
     ],
   },
@@ -53,7 +54,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     title: 'Support',
     items: [
-      { label: 'Contact', href: '/contact', icon: '✉️' },
+      { label: 'Contact Us', href: '/contact', icon: '✉️' },
     ],
   },
 ];
@@ -61,8 +62,27 @@ const NAV_GROUPS: NavGroup[] = [
 const GUEST_ITEMS: NavItem[] = [
   { label: 'Home', href: '/', icon: '🏠', guestOnly: true },
   { label: 'Pricing', href: '/pricing', icon: '💰', guestOnly: true },
-  { label: 'Contact', href: '/contact', icon: '✉️', guestOnly: true },
+  { label: 'Contact Us', href: '/contact', icon: '✉️', guestOnly: true },
 ];
+
+const ADMIN_GROUP: NavGroup = {
+  title: 'Admin',
+  items: [
+    { label: 'Admin Dashboard', href: '/admin', icon: '⚡', authOnly: true },
+    { label: 'User Management', href: '/admin/users', icon: '👥', authOnly: true },
+    { label: 'Plan Config', href: '/admin/plans', icon: '📐', authOnly: true },
+    { label: 'Credit Packs', href: '/admin/credit-packs', icon: '💎', authOnly: true },
+    { label: 'Revenue', href: '/admin/revenue', icon: '📈', authOnly: true },
+    { label: 'AI Costs', href: '/admin/ai-costs', icon: '🤖', authOnly: true },
+    { label: 'Feature Flags', href: '/admin/features', icon: '🚩', authOnly: true },
+    { label: 'Support', href: '/admin/support', icon: '🎫', authOnly: true },
+    { label: 'Audit Log', href: '/admin/audit', icon: '📜', authOnly: true },
+    { label: 'Observability', href: '/admin/observability', icon: '📡', authOnly: true },
+    { label: 'Emails', href: '/admin/emails', icon: '📧', authOnly: true },
+    { label: 'Webhooks', href: '/admin/webhooks', icon: '🔗', authOnly: true },
+    { label: 'Alerts', href: '/admin/alerts', icon: '🔔', authOnly: true },
+  ],
+};
 
 // ────────────────────────────────────────────────────────────────────────────
 
@@ -73,6 +93,17 @@ export default function Sidebar() {
 
   const [isOpen, setIsOpen] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
+
+  // Collapsible sections — all expanded by default except Admin
+  const allGroups = [...NAV_GROUPS, ...(user?.is_admin ? [ADMIN_GROUP] : [])];
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>(() => {
+    const init: Record<string, boolean> = {};
+    NAV_GROUPS.forEach((g) => (init[g.title] = false));
+    init[ADMIN_GROUP.title] = true; // Admin collapsed by default
+    return init;
+  });
+  const toggleSection = (title: string) =>
+    setCollapsed((prev) => ({ ...prev, [title]: !prev[title] }));
 
   // Close sidebar when navigating
   useEffect(() => {
@@ -183,30 +214,51 @@ export default function Sidebar() {
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
-        <nav className="py-4">
+        <nav className="py-4 pb-16">
           {isAuthenticated ? (
             <>
-              {NAV_GROUPS.map((group) => (
+              {[...NAV_GROUPS, ...(user?.is_admin ? [ADMIN_GROUP] : [])].map((group) => (
                 <div key={group.title} className="mb-3">
-                  <p className="px-5 mb-1 text-[10px] font-bold uppercase tracking-widest text-gray-400">
-                    {group.title}
-                  </p>
-                  {group.items
-                    .filter((item) => !item.guestOnly)
-                    .map((item) => (
-                      <Link
-                        key={item.href}
-                        href={item.href}
-                        className={`flex items-center gap-3 mx-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
-                          isActive(item.href)
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
-                        }`}
-                      >
-                        <span className="text-base w-5 text-center">{item.icon}</span>
-                        {item.label}
-                      </Link>
-                    ))}
+                  <button
+                    onClick={() => toggleSection(group.title)}
+                    className="w-full flex items-center justify-between px-5 mb-1 group cursor-pointer"
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400 group-hover:text-gray-600 transition">
+                      {group.title}
+                    </span>
+                    <svg
+                      className={`w-3.5 h-3.5 text-gray-400 group-hover:text-gray-600 transition-transform duration-200 ${
+                        collapsed[group.title] ? '-rotate-90' : 'rotate-0'
+                      }`}
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ease-in-out ${
+                      collapsed[group.title] ? 'max-h-0 opacity-0' : 'max-h-[800px] opacity-100'
+                    }`}
+                  >
+                    {group.items
+                      .filter((item) => !item.guestOnly)
+                      .map((item) => (
+                        <Link
+                          key={item.href}
+                          href={item.href}
+                          className={`flex items-center gap-3 mx-2 px-3 py-2 rounded-lg text-sm font-medium transition ${
+                            isActive(item.href)
+                              ? 'bg-blue-50 text-blue-700'
+                              : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
+                          }`}
+                        >
+                          <span className="text-base w-5 text-center">{item.icon}</span>
+                          {item.label}
+                        </Link>
+                      ))}
+                  </div>
                 </div>
               ))}
 

@@ -517,6 +517,46 @@ export default function TailorResumePage() {
                 </p>
               </div>
 
+              {/* Job URL Auto-Extract */}
+              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg p-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Or paste a job posting URL
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="url"
+                    value={jobUrl}
+                    onChange={(e) => setJobUrl(e.target.value)}
+                    placeholder="https://www.linkedin.com/jobs/view/..."
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!jobUrl.trim()) return;
+                      try {
+                        setUrlLoading(true);
+                        const result = await apiClient.extractJobFromURL(jobUrl.trim());
+                        setJobDescription(result.job_description);
+                        if (result.company) setCompanyName(result.company);
+                        if (result.title) setTargetRole(result.title);
+                      } catch (err: any) {
+                        alert(err.message || "Failed to extract job description");
+                      } finally {
+                        setUrlLoading(false);
+                      }
+                    }}
+                    disabled={urlLoading || !jobUrl.trim()}
+                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium transition disabled:opacity-60 text-sm whitespace-nowrap"
+                  >
+                    {urlLoading ? "Extracting..." : "Extract JD"}
+                  </button>
+                </div>
+                <p className="text-gray-500 text-xs mt-1">
+                  Supports LinkedIn, Indeed, Glassdoor, and most job boards
+                </p>
+              </div>
+
               {/* Company Name */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -575,46 +615,6 @@ export default function TailorResumePage() {
                   ))}
                 </div>
                 <p className="text-gray-500 text-xs mt-1">Choose how the tailored resume should be structured</p>
-              </div>
-
-              {/* Job URL Auto-Extract */}
-              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg p-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Or paste a job posting URL
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={jobUrl}
-                    onChange={(e) => setJobUrl(e.target.value)}
-                    placeholder="https://www.linkedin.com/jobs/view/..."
-                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent text-sm"
-                  />
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!jobUrl.trim()) return;
-                      try {
-                        setUrlLoading(true);
-                        const result = await apiClient.extractJobFromURL(jobUrl.trim());
-                        setJobDescription(result.job_description);
-                        if (result.company) setCompanyName(result.company);
-                        if (result.title) setTargetRole(result.title);
-                      } catch (err: any) {
-                        alert(err.message || "Failed to extract job description");
-                      } finally {
-                        setUrlLoading(false);
-                      }
-                    }}
-                    disabled={urlLoading || !jobUrl.trim()}
-                    className="px-4 py-2 bg-cyan-600 hover:bg-cyan-700 text-white rounded-lg font-medium transition disabled:opacity-60 text-sm whitespace-nowrap"
-                  >
-                    {urlLoading ? "Extracting..." : "Extract JD"}
-                  </button>
-                </div>
-                <p className="text-gray-500 text-xs mt-1">
-                  Supports LinkedIn, Indeed, Glassdoor, and most job boards
-                </p>
               </div>
 
               {/* Job Description */}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { apiClient } from "@/lib/utils/api";
-import { Plan, CreditPack, EmailQuotaPack } from "@/lib/types";
+import { Plan, CreditPack } from "@/lib/types";
 
 // ---------------------------------------------------------------------------
 // Helper: format cents to "$X.XX"
@@ -118,7 +118,6 @@ export default function PricingPage() {
   const { isAuthenticated } = useAuth();
   const [plans, setPlans] = useState<Plan[]>([]);
   const [creditPacks, setCreditPacks] = useState<CreditPack[]>([]);
-  const [emailQuotaPacks, setEmailQuotaPacks] = useState<EmailQuotaPack[]>([]);
   const [loading, setLoading] = useState(true);
   const hasFetched = useRef(false);
 
@@ -128,14 +127,12 @@ export default function PricingPage() {
 
     const fetchData = async () => {
       try {
-        const [plansRes, packsRes, emailPacksRes] = await Promise.all([
+        const [plansRes, packsRes] = await Promise.all([
           apiClient.getPlans(),
           apiClient.getCreditPacks(),
-          apiClient.getEmailQuotaPacks(),
         ]);
         setPlans(plansRes);
         setCreditPacks(packsRes.packs);
-        setEmailQuotaPacks(emailPacksRes.packs);
       } catch (err) {
         console.error("Failed to fetch pricing data:", err);
       } finally {
@@ -220,33 +217,6 @@ export default function PricingPage() {
             </div>
             <p className="text-center text-gray-500 mt-6 text-sm">
               Purchased credits are valid for 60 days and work with any plan.
-            </p>
-          </div>
-        )}
-
-        {/* Email Quota Packs */}
-        {emailQuotaPacks.length > 0 && (
-          <div className="mb-16">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-4">
-              Email Reminder Packs
-            </h2>
-            <p className="text-center text-gray-600 mb-10 text-lg">
-              Need more email reminders? Purchase add-on packs — valid for 60 days.
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              {emailQuotaPacks.map((pack) => (
-                <EmailQuotaPackCard
-                  key={pack.id}
-                  emails={pack.emails}
-                  price={`$${pack.price_usd.toFixed(2)}`}
-                  perEmail={`$${(pack.price_cents / 100 / pack.emails).toFixed(3)}`}
-                  ctaLink="/subscribe"
-                  bestValue={pack.popular}
-                />
-              ))}
-            </div>
-            <p className="text-center text-gray-500 mt-6 text-sm">
-              Purchased email quota is valid for 60 days and stacks with your plan allowance.
             </p>
           </div>
         )}
@@ -405,41 +375,4 @@ function CreditPackCard({
   );
 }
 
-function EmailQuotaPackCard({
-  emails,
-  price,
-  perEmail,
-  ctaLink,
-  bestValue = false,
-}: {
-  emails: number;
-  price: string;
-  perEmail: string;
-  ctaLink: string;
-  bestValue?: boolean;
-}) {
-  return (
-    <div className={`relative bg-white rounded-lg p-6 border-2 ${
-      bestValue ? "border-purple-500 shadow-lg" : "border-gray-200"
-    }`}>
-      {bestValue && (
-        <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-purple-500 text-white text-xs font-bold px-3 py-1 rounded-full">
-          Best Value
-        </span>
-      )}
-      <div className="text-center">
-        <div className="text-3xl font-bold text-gray-900">{emails.toLocaleString()}</div>
-        <div className="text-gray-500 mb-4">email reminders</div>
-        <div className="text-3xl font-bold text-gray-900 mb-1">{price}</div>
-        <div className="text-sm text-gray-500 mb-4">{perEmail}/email</div>
-        <div className="text-xs text-amber-600 font-semibold mb-4">Valid for 60 days</div>
-        <Link
-          href={ctaLink}
-          className="block w-full py-2 rounded-lg font-semibold text-center bg-purple-600 text-white hover:bg-purple-700 transition"
-        >
-          Buy Email Pack
-        </Link>
-      </div>
-    </div>
-  );
-}
+

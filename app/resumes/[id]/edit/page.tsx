@@ -186,24 +186,15 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
                 {content.length} characters
               </p>
             </div>
-
-            <div className="space-y-2">
-              <p className="text-sm text-gray-700 font-medium">Need help?</p>
-              <ul className="text-sm text-gray-600 space-y-1">
-                <li>• Use clear headings (EXPERIENCE, EDUCATION, SKILLS)</li>
-                <li>• Include metrics and accomplishments</li>
-                <li>• Keep formatting simple and readable</li>
-                <li>• Use keywords from job descriptions</li>
-              </ul>
-            </div>
           </div>
 
-          {/* Preview */}
+          {/* Preview — top aligns with title input, bottom aligns with textarea bottom */}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-2">
               Preview
             </label>
-            <div className="bg-white border border-gray-300 rounded-lg p-6 h-96 overflow-y-auto shadow-sm">
+            {/* Height = input(2.5rem) + helper(1.25rem) + space-y-4 gap(1rem) + content label(1.75rem) + textarea h-96(24rem) = 30.5rem */}
+            <div className="h-[30.5rem] bg-white border border-gray-300 rounded-lg p-6 overflow-y-auto shadow-sm">
               {title && (
                 <div className="mb-4 pb-4 border-b border-gray-200">
                   <h2 className="text-xl font-bold text-gray-900">{title}</h2>
@@ -218,6 +209,17 @@ function ResumeEditorContent({ resumeId }: { resumeId: string }) {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Tips */}
+        <div className="mt-4 space-y-2">
+          <p className="text-sm text-gray-700 font-medium">Need help?</p>
+          <ul className="text-sm text-gray-600 space-y-1">
+            <li>• Use clear headings (EXPERIENCE, EDUCATION, SKILLS)</li>
+            <li>• Include metrics and accomplishments</li>
+            <li>• Keep formatting simple and readable</li>
+            <li>• Use keywords from job descriptions</li>
+          </ul>
         </div>
 
         {/* Resume Info */}

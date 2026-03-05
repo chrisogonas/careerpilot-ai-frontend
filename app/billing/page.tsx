@@ -3,14 +3,26 @@
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/context/AuthContext";
-import { BillingEvent } from "@/lib/types";
+import { BillingEvent, CreditPack } from "@/lib/types";
+
+// Credit pack features/benefits listed on the right card
+const CREDIT_PACK_FEATURES = [
+  "Credits added to your account instantly",
+  "Valid for 60 days from purchase",
+  "Works alongside subscription credits",
+  "Subscription credits are used first",
+  "Use for resume tailoring, cover letters, job analysis & STAR stories",
+  "Stack with any plan — Free, Pro, or Premium",
+  "No recurring commitment",
+];
 
 function BillingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, subscription, currentPlan, isLoading, getSubscription, getBillingHistory, cancelSubscription } =
+  const { user, subscription, currentPlan, isLoading, getSubscription, getBillingHistory, cancelSubscription, getCreditPacks } =
     useAuth();
   const [billingHistory, setBillingHistory] = useState<BillingEvent[]>([]);
+  const [creditPacks, setCreditPacks] = useState<CreditPack[]>([]);
   const [isLoading2, setIsLoading2] = useState(true);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
@@ -31,8 +43,12 @@ function BillingContent() {
       try {
         setIsLoading2(true);
         await getSubscription();
-        const history = await getBillingHistory();
+        const [history, packs] = await Promise.all([
+          getBillingHistory(),
+          getCreditPacks(),
+        ]);
         setBillingHistory(history);
+        setCreditPacks(packs);
       } catch (err) {
         console.error("Failed to fetch billing data:", err);
       } finally {
@@ -130,14 +146,27 @@ function BillingContent() {
 
                   <div>
                     <p className="text-gray-600 text-sm mb-1">Billing Cycle</p>
-                    <p className="capitalize">{subscription.billing_cycle}ly</p>
+                    <p className="capitalize">{subscription.billing_cycle}</p>
                   </div>
 
                   <div>
                     <p className="text-gray-600 text-sm mb-1">Current Period</p>
                     <p>
-                      {formatDate(subscription.current_period_start)} -{" "}
-                      {subscription.current_period_end ? formatDate(subscription.current_period_end) : "N/A"}
+                      {subscription.current_period_start
+                        ? formatDate(subscription.current_period_start)
+                        : subscription.created_at
+                        ? formatDate(subscription.created_at)
+                        : "N/A"}{" "}
+                      -{" "}
+                      {subscription.current_period_end
+                        ? formatDate(subscription.current_period_end)
+                        : (() => {
+                            const start = subscription.current_period_start || subscription.created_at;
+                            if (!start) return "N/A";
+                            const end = new Date(start);
+                            end.setDate(end.getDate() + 30);
+                            return formatDate(end.toISOString());
+                          })()}
                     </p>
                   </div>
 
@@ -210,6 +239,80 @@ function BillingContent() {
             </div>
           )}
         </div>
+
+        {/* Active Credit Pack Purchase */}
+        {subscription &&
+          subscription.purchased_credits > 0 &&
+          subscription.purchased_credits_expires_at &&
+          new Date(subscription.purchased_credits_expires_at) > new Date() && (() => {
+            // Find the matching pack from known credit packs
+            const matchedPack = creditPacks.find(
+              (p) => p.credits === subscription.purchased_credits_original
+            );
+            const expiresAt = new Date(subscription.purchased_credits_expires_at);
+            const purchaseDate = new Date(expiresAt);
+            purchaseDate.setDate(purchaseDate.getDate() - 60);
+
+            return (
+              <div className="grid md:grid-cols-2 gap-8 mb-12">
+                {/* Left Card — Pack Details */}
+                <div className="relative bg-white rounded-2xl p-8 border-2 border-purple-500 shadow-md">
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-sm font-semibold px-4 py-1 rounded-full">
+                    Active Purchase
+                  </div>
+
+                  <div className="text-center">
+                    <h3 className="text-xl font-bold mb-2">
+                      {matchedPack ? matchedPack.name : `${subscription.purchased_credits_original} Credits`}
+                    </h3>
+                    <div className="mb-4">
+                      {matchedPack && (
+                        <>
+                          <span className="text-4xl font-bold">${matchedPack.price_usd}</span>
+                          <span className="text-gray-500 ml-1">one-time</span>
+                        </>
+                      )}
+                    </div>
+                    <div className="bg-purple-50 rounded-lg py-3 px-4 mb-4">
+                      <span className="text-2xl font-bold text-purple-700">
+                        {subscription.purchased_credits.toLocaleString()}
+                      </span>
+                      <span className="text-purple-600 ml-1">credits remaining</span>
+                      <span className="text-gray-400 ml-1 text-sm">
+                        / {subscription.purchased_credits_original.toLocaleString()}
+                      </span>
+                    </div>
+                    <p className="text-gray-600 text-sm mb-6">
+                      {matchedPack ? matchedPack.description : "One-time credit purchase"}
+                    </p>
+
+                    {/* Validity Period */}
+                    <div className="bg-gray-50 rounded-lg py-4 px-4 border border-gray-200">
+                      <p className="text-gray-600 text-sm mb-1 font-semibold">Validity Period</p>
+                      <p className="text-gray-800">
+                        {formatDate(purchaseDate.toISOString())} &mdash;{" "}
+                        {formatDate(expiresAt.toISOString())}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Card — Benefits / Features */}
+                <div className="bg-white rounded-xl p-8 border border-gray-200">
+                  <h2 className="text-2xl font-bold mb-6">Credit Pack Benefits</h2>
+
+                  <ul className="space-y-3">
+                    {CREDIT_PACK_FEATURES.map((feature, i) => (
+                      <li key={i} className="flex items-start gap-2 text-gray-700">
+                        <span className="text-green-600 mt-0.5">✓</span>
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            );
+          })()}
 
         {/* Billing History */}
         <div className="bg-white rounded-xl p-8 border border-gray-200">

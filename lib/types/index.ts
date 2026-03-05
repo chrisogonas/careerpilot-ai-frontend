@@ -4,6 +4,7 @@ export interface User {
   email: string;
   full_name: string;
   is_verified: "pending" | "verified";
+  is_admin?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -24,6 +25,7 @@ export interface AuthResponse {
   refresh_token: string;
   token_type: string;
   requires_2fa?: boolean;
+  is_admin?: boolean;
 }
 
 // 2FA Types
@@ -323,6 +325,9 @@ export interface Subscription {
   grace_period_days_remaining?: number;
   created_at: string;
   updated_at: string;
+  purchased_credits: number;
+  purchased_credits_original: number;
+  purchased_credits_expires_at?: string;
 }
 
 export interface StripeCustomer {
@@ -1015,6 +1020,485 @@ export interface ApiError {
   message?: string;
   detail?: string | { error?: string; message?: string };
   details?: string;
+}
+
+// ============================================================================
+// ADMIN TYPES
+// ============================================================================
+
+export interface AdminDashboardData {
+  total_users: number;
+  active_users_today: number;
+  total_api_calls: number;
+  api_calls_today: number;
+  errors_today: number;
+  error_rate_percent: number;
+  avg_response_time_ms: number;
+  top_endpoints: Array<{ endpoint: string; calls: number; avg_response_time_ms: number }>;
+  security_events_today: number;
+  webhook_success_rate: number;
+}
+
+export interface AdminUserListItem {
+  id: string;
+  email: string;
+  full_name: string | null;
+  status: string;
+  credits_remaining: number;
+  subscription_plan: string;
+  created_at: string;
+  last_login: string | null;
+  api_calls_month: number;
+}
+
+export interface AdminUserListResponse {
+  success: boolean;
+  users: AdminUserListItem[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+export interface AdminUserDetail {
+  id: string;
+  email: string;
+  full_name: string | null;
+  is_verified: string;
+  created_at: string;
+  updated_at: string;
+  subscription_id: string | null;
+  plan: string;
+  subscription_status: string;
+  credits_remaining: number;
+  purchased_credits: number;
+  purchased_credits_expires_at: string | null;
+  current_period_start: string | null;
+  current_period_end: string | null;
+  grace_period_end: string | null;
+  stripe_customer_id: string | null;
+  stripe_sub_id: string | null;
+  last_login: string | null;
+  api_calls_month: number;
+  resume_count: number;
+  application_count: number;
+}
+
+export interface AdminPlanOverride {
+  id: string;
+  plan_name: string;
+  field_name: string;
+  field_value: string;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export interface AdminPlanConfig {
+  plan_name: string;
+  display_name: string;
+  monthly_credits: number;
+  price_monthly_cents: number;
+  price_yearly_cents: number;
+  price_usd: number;
+  max_resumes: number;
+  email_reminder_limit: number;
+  description: string;
+  features: string[];
+  overrides: AdminPlanOverride[];
+}
+
+export interface AdminPlanConfigResponse {
+  success: boolean;
+  plans: AdminPlanConfig[];
+  overridable_fields: string[];
+}
+
+// ── Credit Pack Admin Types ─────────────────────────────────────────────────
+
+export interface AdminCreditPackOverride {
+  id: string;
+  pack_id: string;
+  field_name: string;
+  field_value: string;
+  updated_by: string | null;
+  updated_at: string;
+}
+
+export interface AdminCreditPack {
+  id: string;
+  pack_id: string;
+  name: string;
+  credits: number;
+  price_cents: number;
+  price_usd: number;
+  description: string;
+  popular: boolean;
+  overrides: AdminCreditPackOverride[];
+}
+
+export interface AdminCreditPackConfigResponse {
+  success: boolean;
+  packs: AdminCreditPack[];
+  overridable_fields: string[];
+  expiry_days: number;
+}
+
+export interface AdminRevenueSummary {
+  total_paying_users: number;
+  mrr_cents: number;
+  arr_cents: number;
+  total_subscriptions: number;
+  subscriptions_by_plan: Record<string, number>;
+  total_credit_pack_revenue_cents: number;
+  active_grace_periods: number;
+  churn_count_30d: number;
+}
+
+export interface AdminAuditLog {
+  id: string;
+  admin_id: string;
+  action: string;
+  resource_type: string | null;
+  resource_id: string | null;
+  old_values: Record<string, unknown> | null;
+  new_values: Record<string, unknown> | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
+export interface AdminAuditLogResponse {
+  success: boolean;
+  logs: AdminAuditLog[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+// ── Observability Types (Phase 7.2) ──────────────────────────────────────────
+
+export interface SystemHealthData {
+  status: "healthy" | "degraded" | "unhealthy";
+  last_5_min: {
+    requests: number;
+    avg_latency_ms: number;
+    errors_5xx: number;
+    errors_4xx: number;
+    rpm: number;
+  };
+  last_hour: {
+    requests: number;
+    avg_latency_ms: number;
+    errors_5xx: number;
+    error_rate_percent: number;
+    rpm: number;
+  };
+  timestamp: string;
+}
+
+export interface LatencyPercentilesData {
+  hours: number;
+  p50_ms: number;
+  p95_ms: number;
+  p99_ms: number;
+  avg_ms: number;
+  total_requests: number;
+}
+
+export interface LatencyTimeseriesPoint {
+  time: string;
+  avg_ms: number;
+  p95_ms: number;
+  requests: number;
+  errors: number;
+}
+
+export interface EndpointHeatmapItem {
+  endpoint: string;
+  method: string;
+  calls: number;
+  avg_ms: number;
+  p95_ms: number;
+  errors: number;
+  error_rate_percent: number;
+}
+
+export interface ErrorBreakdownData {
+  hours: number;
+  by_status_code: Array<{ status_code: number; count: number }>;
+  top_error_endpoints: Array<{ endpoint: string; method: string; count: number }>;
+}
+
+export interface EmailStatsData {
+  days: number;
+  total_sent: number;
+  by_type: Record<string, number>;
+  daily_trend: Array<{ date: string; count: number }>;
+  top_senders: Array<{ user_id: string; count: number }>;
+}
+
+export interface WebhookEndpointHealth {
+  id: string;
+  url: string;
+  active: boolean;
+  consecutive_failures: number;
+  deliveries: number;
+  successes: number;
+  success_rate_percent: number;
+}
+
+export interface WebhookHealthData {
+  hours: number;
+  total_deliveries: number;
+  successful: number;
+  failed: number;
+  success_rate_percent: number;
+  avg_duration_ms: number;
+  endpoints: WebhookEndpointHealth[];
+  recent_failures: Array<{
+    id: string;
+    endpoint_url: string;
+    status_code: number | null;
+    error: string | null;
+    at: string;
+  }>;
+}
+
+export interface AlertThresholdData {
+  id: string;
+  metric_name: string;
+  operator: string;
+  threshold_value: number;
+  severity: string;
+  enabled: boolean;
+  cooldown_minutes: number;
+  last_triggered_at: string | null;
+  notify_email: boolean;
+  created_at: string;
+}
+
+export interface AlertHistoryItem {
+  id: string;
+  metric_name: string;
+  metric_value: string;
+  threshold_value: string;
+  severity: string;
+  message: string;
+  acknowledged: boolean;
+  created_at: string;
+}
+
+// ── Phase 7.3: Advanced Admin Types ──────────────────────────────────────────
+
+export interface AdminRevenueDetailed {
+  daily_mrr: Array<{ date: string; mrr_cents: number }>;
+  churn_waterfall: Array<{
+    date: string;
+    upgrades: number;
+    downgrades: number;
+    churns: number;
+    reactivations: number;
+    net_mrr_change_cents: number;
+  }>;
+  cohort_retention: Array<{
+    cohort_date: string;
+    cohort_size: number;
+    retention_day_7?: number;
+    retention_day_14?: number;
+    retention_day_30?: number;
+    retention_day_60?: number;
+    retention_day_90?: number;
+  }>;
+  conversion_funnel: {
+    total_users: number;
+    free_users: number;
+    pro_users: number;
+    premium_users: number;
+    conversion_rate: number;
+  };
+  total_ltv_cents: number;
+  avg_ltv_cents: number;
+}
+
+export interface AdminAICostSummary {
+  total_tokens_used: number;
+  total_credits_consumed: number;
+  daily_usage: Array<{
+    date: string;
+    tokens_used: number;
+    credits_consumed: number;
+    operation_count: number;
+  }>;
+  by_operation: Array<{
+    operation: string;
+    total_tokens: number;
+    total_credits: number;
+    count: number;
+    avg_tokens_per_call: number;
+  }>;
+  by_user: Array<{
+    user_id: string;
+    email: string;
+    total_tokens: number;
+    total_credits: number;
+    count: number;
+  }>;
+  estimated_cost_usd: number;
+}
+
+export interface AdminFeatureFlag {
+  id: string;
+  flag_name: string;
+  description: string | null;
+  enabled: boolean;
+  target_type: string; // "global" | "plan" | "user"
+  target_value: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminFeatureFlagCreateRequest {
+  flag_name: string;
+  description?: string;
+  enabled?: boolean;
+  target_type?: string;
+  target_value?: string;
+}
+
+export interface AdminFeatureFlagUpdateRequest {
+  flag_name?: string;
+  description?: string;
+  enabled?: boolean;
+  target_type?: string;
+  target_value?: string;
+}
+
+export interface AdminSupportTicket {
+  id: string;
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+  status: string; // "new" | "read" | "replied" | "closed"
+  user_id: string | null;
+  created_at: string;
+}
+
+export interface AdminSupportTicketListResponse {
+  success: boolean;
+  tickets: AdminSupportTicket[];
+  total: number;
+  skip: number;
+  limit: number;
+}
+
+// ============================================================================
+// MOCK INTERVIEW TYPES (Phase 8)
+// ============================================================================
+
+export type InterviewMode = "text" | "audio";
+export type InterviewStatus = "in_progress" | "completed" | "cancelled";
+
+export interface InterviewAccessResponse {
+  has_access: boolean;
+  modes_available: InterviewMode[];
+  is_trial: boolean;
+  trial_days_remaining: number | null;
+  plan: string;
+  reason: string;
+}
+
+export interface InterviewStartPayload {
+  resume_text: string;
+  job_description: string;
+  target_role?: string;
+  company_name?: string;
+  job_url?: string;
+  interview_mode?: InterviewMode;
+}
+
+export interface InterviewStartResponse {
+  session_id: string;
+  first_question: string;
+  question_type: string;
+  question_number: number;
+  total_planned: number;
+  credits_remaining: number;
+}
+
+export interface InterviewRespondPayload {
+  answer: string;
+}
+
+export interface InterviewRespondResponse {
+  session_id: string;
+  answer_feedback: string;
+  answer_score: number;
+  next_question: string | null;
+  next_question_type: string | null;
+  question_number: number;
+  total_planned: number;
+  is_complete: boolean;
+}
+
+export interface InterviewMessageOut {
+  id: string;
+  role: "interviewer" | "candidate";
+  content: string;
+  message_index: number;
+  question_type: string | null;
+  score: string | null;
+  feedback: string | null;
+  created_at: string;
+}
+
+export interface InterviewFeedback {
+  overall_score: number;
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+  star_adherence: string;
+  communication_quality: string;
+  confidence_impression: string;
+  per_question: Array<{
+    question: string;
+    answer_summary: string;
+    score: number;
+    feedback: string;
+  }>;
+  recommended_focus_areas: string[];
+}
+
+export interface InterviewSessionOut {
+  id: string;
+  target_role: string | null;
+  company_name: string | null;
+  interview_mode: InterviewMode;
+  status: InterviewStatus;
+  total_questions: number;
+  overall_score: string | null;
+  feedback: InterviewFeedback | null;
+  messages: InterviewMessageOut[];
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface InterviewSessionSummary {
+  id: string;
+  target_role: string | null;
+  company_name: string | null;
+  interview_mode: InterviewMode;
+  status: InterviewStatus;
+  total_questions: number;
+  overall_score: string | null;
+  started_at: string;
+  completed_at: string | null;
+}
+
+export interface InterviewEndResponse {
+  session_id: string;
+  status: string;
+  feedback: InterviewFeedback;
+  credits_remaining: number;
 }
 
 // Auth Context Types

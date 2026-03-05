@@ -97,6 +97,36 @@ import {
   TodoStatus,
   TodoCategory,
   TodoPriority,
+  AdminDashboardData,
+  AdminUserListResponse,
+  AdminUserDetail,
+  AdminPlanConfigResponse,
+  AdminCreditPackConfigResponse,
+  AdminRevenueSummary,
+  AdminAuditLogResponse,
+  SystemHealthData,
+  LatencyPercentilesData,
+  LatencyTimeseriesPoint,
+  EndpointHeatmapItem,
+  ErrorBreakdownData,
+  EmailStatsData,
+  WebhookHealthData,
+  AlertThresholdData,
+  AlertHistoryItem,
+  AdminRevenueDetailed,
+  AdminAICostSummary,
+  AdminFeatureFlag,
+  AdminFeatureFlagCreateRequest,
+  AdminFeatureFlagUpdateRequest,
+  AdminSupportTicket,
+  AdminSupportTicketListResponse,
+  InterviewAccessResponse,
+  InterviewStartPayload,
+  InterviewStartResponse,
+  InterviewRespondResponse,
+  InterviewEndResponse,
+  InterviewSessionOut,
+  InterviewSessionSummary,
 } from "@/lib/types";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
@@ -1120,6 +1150,432 @@ class ApiClient {
       headers: this.getHeaders(),
     });
     return this.handleResponse<DueTodoRemindersResponse>(response);
+  }
+
+  // ============================================================================
+  // ADMIN ENDPOINTS
+  // ============================================================================
+
+  async getAdminDashboard(): Promise<AdminDashboardData> {
+    const response = await fetch(`${this.baseURL}/admin/dashboard`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<AdminDashboardData>(response);
+  }
+
+  async getAdminUsers(params?: {
+    skip?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+  }): Promise<AdminUserListResponse> {
+    const query = new URLSearchParams();
+    if (params?.skip !== undefined) query.set("skip", String(params.skip));
+    if (params?.limit !== undefined) query.set("limit", String(params.limit));
+    if (params?.search) query.set("search", params.search);
+    if (params?.status) query.set("status", params.status);
+    const qs = query.toString();
+    const response = await fetch(`${this.baseURL}/admin/users${qs ? `?${qs}` : ""}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<AdminUserListResponse>(response);
+  }
+
+  async getAdminUserDetail(userId: string): Promise<{ success: boolean; user: AdminUserDetail }> {
+    const response = await fetch(`${this.baseURL}/admin/users/${userId}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ success: boolean; user: AdminUserDetail }>(response);
+  }
+
+  async suspendUser(userId: string, reason: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${this.baseURL}/admin/users/${userId}/suspend`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ reason }),
+    });
+    return this.handleResponse<{ success: boolean; message: string }>(response);
+  }
+
+  async unsuspendUser(userId: string, reason: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${this.baseURL}/admin/users/${userId}/unsuspend`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ reason }),
+    });
+    return this.handleResponse<{ success: boolean; message: string }>(response);
+  }
+
+  async adjustCredits(userId: string, amount: number, reason: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${this.baseURL}/admin/credits/adjust`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ user_id: userId, amount, reason }),
+    });
+    return this.handleResponse<{ success: boolean; message: string }>(response);
+  }
+
+  async getRevenueSummary(): Promise<{ success: boolean; revenue: AdminRevenueSummary }> {
+    const response = await fetch(`${this.baseURL}/admin/revenue/summary`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ success: boolean; revenue: AdminRevenueSummary }>(response);
+  }
+
+  async extendGracePeriod(subscriptionId: string, days: number): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${this.baseURL}/admin/subscriptions/${subscriptionId}/extend-grace`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ days }),
+    });
+    return this.handleResponse<{ success: boolean; message: string }>(response);
+  }
+
+  async getAdminPlanConfig(): Promise<AdminPlanConfigResponse> {
+    const response = await fetch(`${this.baseURL}/admin/plan-config`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<AdminPlanConfigResponse>(response);
+  }
+
+  async upsertPlanOverride(planName: string, fieldName: string, fieldValue: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseURL}/admin/plan-config`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ plan_name: planName, field_name: fieldName, field_value: fieldValue }),
+    });
+    return this.handleResponse<{ success: boolean }>(response);
+  }
+
+  async deletePlanOverride(planName: string, fieldName: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${this.baseURL}/admin/plan-config?plan_name=${encodeURIComponent(planName)}&field_name=${encodeURIComponent(fieldName)}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ success: boolean; message: string }>(response);
+  }
+
+  // Credit Pack Config (admin)
+  async getAdminCreditPackConfig(): Promise<AdminCreditPackConfigResponse> {
+    const response = await fetch(`${this.baseURL}/admin/credit-packs`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<AdminCreditPackConfigResponse>(response);
+  }
+
+  async upsertCreditPackOverride(packId: string, fieldName: string, fieldValue: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${this.baseURL}/admin/credit-packs`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ pack_id: packId, field_name: fieldName, field_value: fieldValue }),
+    });
+    return this.handleResponse<{ success: boolean }>(response);
+  }
+
+  async deleteCreditPackOverride(packId: string, fieldName: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${this.baseURL}/admin/credit-packs?pack_id=${encodeURIComponent(packId)}&field_name=${encodeURIComponent(fieldName)}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ success: boolean; message: string }>(response);
+  }
+
+  async getAuditLogs(params?: {
+    skip?: number;
+    limit?: number;
+    action?: string;
+    admin_id?: string;
+  }): Promise<AdminAuditLogResponse> {
+    const query = new URLSearchParams();
+    if (params?.skip !== undefined) query.set("skip", String(params.skip));
+    if (params?.limit !== undefined) query.set("limit", String(params.limit));
+    if (params?.action) query.set("action", params.action);
+    if (params?.admin_id) query.set("admin_id", params.admin_id);
+    const qs = query.toString();
+    const response = await fetch(`${this.baseURL}/admin/audit-logs${qs ? `?${qs}` : ""}`, {
+      method: "POST",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<AdminAuditLogResponse>(response);
+  }
+
+  async exportUsers(): Promise<{ success: boolean; format: string; data: string }> {
+    const response = await fetch(`${this.baseURL}/admin/export/users?format=csv`, {
+      method: "POST",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ success: boolean; format: string; data: string }>(response);
+  }
+
+  // ── Observability Endpoints (Phase 7.2) ──────────────────────────────────
+
+  async getSystemHealth(): Promise<SystemHealthData> {
+    const response = await fetch(`${this.baseURL}/admin/observability/health`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<SystemHealthData>(response);
+  }
+
+  async getLatencyPercentiles(hours = 24): Promise<LatencyPercentilesData> {
+    const response = await fetch(`${this.baseURL}/admin/observability/latency?hours=${hours}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<LatencyPercentilesData>(response);
+  }
+
+  async getLatencyTimeseries(hours = 24, bucketMinutes = 15): Promise<LatencyTimeseriesPoint[]> {
+    const response = await fetch(`${this.baseURL}/admin/observability/latency/timeseries?hours=${hours}&bucket_minutes=${bucketMinutes}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<LatencyTimeseriesPoint[]>(response);
+  }
+
+  async getEndpointHeatmap(hours = 24, limit = 20): Promise<EndpointHeatmapItem[]> {
+    const response = await fetch(`${this.baseURL}/admin/observability/endpoints?hours=${hours}&limit=${limit}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<EndpointHeatmapItem[]>(response);
+  }
+
+  async getErrorBreakdown(hours = 24): Promise<ErrorBreakdownData> {
+    const response = await fetch(`${this.baseURL}/admin/observability/errors?hours=${hours}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ErrorBreakdownData>(response);
+  }
+
+  async getEmailStats(days = 30): Promise<EmailStatsData> {
+    const response = await fetch(`${this.baseURL}/admin/observability/emails?days=${days}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<EmailStatsData>(response);
+  }
+
+  async getWebhookHealth(hours = 24): Promise<WebhookHealthData> {
+    const response = await fetch(`${this.baseURL}/admin/observability/webhooks?hours=${hours}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<WebhookHealthData>(response);
+  }
+
+  async getAlertThresholds(): Promise<AlertThresholdData[]> {
+    const response = await fetch(`${this.baseURL}/admin/observability/alerts`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<AlertThresholdData[]>(response);
+  }
+
+  async upsertAlertThreshold(data: {
+    metric_name: string;
+    operator: string;
+    threshold_value: number;
+    severity?: string;
+    enabled?: boolean;
+    cooldown_minutes?: number;
+    notify_email?: boolean;
+  }): Promise<{ id: string; metric_name: string; status: string }> {
+    const response = await fetch(`${this.baseURL}/admin/observability/alerts`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    return this.handleResponse<{ id: string; metric_name: string; status: string }>(response);
+  }
+
+  async deleteAlertThreshold(thresholdId: string): Promise<{ status: string }> {
+    const response = await fetch(`${this.baseURL}/admin/observability/alerts/${thresholdId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ status: string }>(response);
+  }
+
+  async evaluateAlerts(): Promise<{ triggered: number; alerts: Array<{ metric_name: string; metric_value: number; threshold: string; severity: string; message: string }> }> {
+    const response = await fetch(`${this.baseURL}/admin/observability/alerts/evaluate`, {
+      method: "POST",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ triggered: number; alerts: Array<{ metric_name: string; metric_value: number; threshold: string; severity: string; message: string }> }>(response);
+  }
+
+  async getAlertHistory(limit = 50, severity?: string): Promise<AlertHistoryItem[]> {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (severity) params.set("severity", severity);
+    const response = await fetch(`${this.baseURL}/admin/observability/alerts/history?${params}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<AlertHistoryItem[]>(response);
+  }
+
+  async acknowledgeAlert(alertId: string): Promise<{ status: string }> {
+    const response = await fetch(`${this.baseURL}/admin/observability/alerts/history/${alertId}/acknowledge`, {
+      method: "POST",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ status: string }>(response);
+  }
+
+  // ── Phase 7.3: Advanced Admin ────────────────────────────────────────────
+
+  async getRevenueDetailed(days = 90): Promise<AdminRevenueDetailed> {
+    const response = await fetch(`${this.baseURL}/admin/revenue/detailed?days=${days}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    const json = await this.handleResponse<{ success: boolean; revenue: AdminRevenueDetailed }>(response);
+    return json.revenue;
+  }
+
+  async getAICosts(days = 30, startDate?: string, endDate?: string): Promise<AdminAICostSummary> {
+    const params = new URLSearchParams({ days: String(days) });
+    if (startDate) params.set("start_date", startDate);
+    if (endDate) params.set("end_date", endDate);
+    const response = await fetch(`${this.baseURL}/admin/ai-costs?${params}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    const json = await this.handleResponse<{ success: boolean; costs: AdminAICostSummary }>(response);
+    return json.costs;
+  }
+
+  async getFeatureFlags(): Promise<AdminFeatureFlag[]> {
+    const response = await fetch(`${this.baseURL}/admin/feature-flags`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    const json = await this.handleResponse<{ success: boolean; flags: AdminFeatureFlag[] }>(response);
+    return json.flags;
+  }
+
+  async createFeatureFlag(data: AdminFeatureFlagCreateRequest): Promise<AdminFeatureFlag> {
+    const response = await fetch(`${this.baseURL}/admin/feature-flags`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    const json = await this.handleResponse<{ success: boolean; flag: AdminFeatureFlag }>(response);
+    return json.flag;
+  }
+
+  async updateFeatureFlag(flagId: string, data: AdminFeatureFlagUpdateRequest): Promise<AdminFeatureFlag> {
+    const response = await fetch(`${this.baseURL}/admin/feature-flags/${flagId}`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify(data),
+    });
+    const json = await this.handleResponse<{ success: boolean; flag: AdminFeatureFlag }>(response);
+    return json.flag;
+  }
+
+  async deleteFeatureFlag(flagId: string): Promise<{ status: string }> {
+    const response = await fetch(`${this.baseURL}/admin/feature-flags/${flagId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ status: string }>(response);
+  }
+
+  async getSupportTickets(
+    skip = 0,
+    limit = 50,
+    status?: string,
+    search?: string,
+  ): Promise<AdminSupportTicketListResponse> {
+    const params = new URLSearchParams({ skip: String(skip), limit: String(limit) });
+    if (status) params.set("status", status);
+    if (search) params.set("search", search);
+    const response = await fetch(`${this.baseURL}/admin/support/tickets?${params}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<AdminSupportTicketListResponse>(response);
+  }
+
+  async updateTicketStatus(ticketId: string, status: string): Promise<AdminSupportTicket> {
+    const response = await fetch(`${this.baseURL}/admin/support/tickets/${ticketId}`, {
+      method: "PUT",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ status }),
+    });
+    const json = await this.handleResponse<{ success: boolean; ticket: AdminSupportTicket }>(response);
+    return json.ticket;
+  }
+
+  // ============================================================================
+  // MOCK INTERVIEW ENDPOINTS (Phase 8)
+  // ============================================================================
+
+  async getInterviewAccess(): Promise<InterviewAccessResponse> {
+    const response = await fetch(`${this.baseURL}/interviews/access`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<InterviewAccessResponse>(response);
+  }
+
+  async startInterview(payload: InterviewStartPayload): Promise<InterviewStartResponse> {
+    const response = await fetch(`${this.baseURL}/interviews/start`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<InterviewStartResponse>(response);
+  }
+
+  async respondToInterview(sessionId: string, answer: string): Promise<InterviewRespondResponse> {
+    const response = await fetch(`${this.baseURL}/interviews/${sessionId}/respond`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify({ answer }),
+    });
+    return this.handleResponse<InterviewRespondResponse>(response);
+  }
+
+  async endInterview(sessionId: string): Promise<InterviewEndResponse> {
+    const response = await fetch(`${this.baseURL}/interviews/${sessionId}/end`, {
+      method: "POST",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<InterviewEndResponse>(response);
+  }
+
+  async getInterviewSession(sessionId: string): Promise<InterviewSessionOut> {
+    const response = await fetch(`${this.baseURL}/interviews/${sessionId}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<InterviewSessionOut>(response);
+  }
+
+  async getInterviewSessions(skip = 0, limit = 20): Promise<InterviewSessionSummary[]> {
+    const response = await fetch(`${this.baseURL}/interviews?skip=${skip}&limit=${limit}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<InterviewSessionSummary[]>(response);
+  }
+
+  async deleteInterviewSession(sessionId: string): Promise<void> {
+    const response = await fetch(`${this.baseURL}/interviews/${sessionId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    await this.handleResponse(response);
   }
 }
 
