@@ -1,11 +1,38 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
+import { apiClient } from "@/lib/utils/api";
+import { Plan, CreditPack } from "@/lib/types";
+
+function centsToUsd(cents: number): string {
+  return `$${(cents / 100).toFixed(2)}`;
+}
 
 export default function Home() {
   const { isAuthenticated } = useAuth();
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [creditPacks, setCreditPacks] = useState<CreditPack[]>([]);
+  const hasFetched = useRef(false);
+
+  useEffect(() => {
+    if (hasFetched.current) return;
+    hasFetched.current = true;
+    const fetchData = async () => {
+      try {
+        const [plansRes, packsRes] = await Promise.all([
+          apiClient.getPlans(),
+          apiClient.getCreditPacks(),
+        ]);
+        setPlans(plansRes);
+        setCreditPacks(packsRes.packs);
+      } catch (err) {
+        console.error("Failed to fetch pricing data:", err);
+      }
+    };
+    fetchData();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-100">
@@ -136,55 +163,25 @@ export default function Home() {
             Simple Pricing
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <PricingCard
-              name="Free"
-              price="$0"
-              features={[
-                "60 monthly credits",
-                "3 resumes",
-                "Resume tailoring",
-                "Job analysis",
-                "STAR story generation",
-                "5 free job searches",
-                "Application tracker",
-                "Community support",
-              ]}
-              ctaLink="/auth/register"
-            />
-            <PricingCard
-              name="Pro"
-              price="$9.99"
-              features={[
-                "500 monthly credits",
-                "20 resumes",
-                "Advanced resume tailoring",
-                "Cover letter generation",
-                "AI mock interviews",
-                "Unlimited job board search",
-                "STAR story generation",
-                "Application tracker",
-                "Priority support",
-              ]}
-              highlighted
-              ctaLink="/subscribe"
-            />
-            <PricingCard
-              name="Premium"
-              price="$29.99"
-              features={[
-                "2,000 monthly credits",
-                "Unlimited resumes",
-                "Unlimited resume tailoring",
-                "Cover letter generation",
-                "AI mock interviews",
-                "Unlimited job board search",
-                "STAR story generation",
-                "Advanced analytics",
-                "Application tracker",
-                "Dedicated support",
-              ]}
-              ctaLink="/subscribe"
-            />
+            {(["free", "pro", "premium"] as const).map((name) => {
+              const plan = plans.find((p) => p.name === name);
+              const defaults: Record<string, { display: string; price: string; features: string[] }> = {
+                free: { display: "Free", price: "$0", features: ["60 monthly credits", "3 resumes", "Resume tailoring", "Job analysis", "STAR story generation", "5 free job searches", "Application tracker", "Community support"] },
+                pro: { display: "Pro", price: "$9.99", features: ["500 monthly credits", "20 resumes", "Advanced resume tailoring", "Cover letter generation", "AI mock interviews", "Unlimited job board search", "STAR story generation", "Application tracker", "Priority support"] },
+                premium: { display: "Premium", price: "$29.99", features: ["2,000 monthly credits", "Unlimited resumes", "Unlimited resume tailoring", "Cover letter generation", "AI mock interviews", "Unlimited job board search", "STAR story generation", "Advanced analytics", "Application tracker", "Dedicated support"] },
+              };
+              const d = defaults[name];
+              return (
+                <PricingCard
+                  key={name}
+                  name={plan?.display_name ?? d.display}
+                  price={plan ? centsToUsd(plan.price_monthly) : d.price}
+                  features={plan?.features ?? d.features}
+                  highlighted={name === "pro"}
+                  ctaLink={name === "free" ? "/auth/register" : "/subscribe"}
+                />
+              );
+            })}
           </div>
 
           {/* Pay As You Go Credit Packs */}
@@ -196,22 +193,15 @@ export default function Home() {
               Need extra credits? Purchase one-time credit packs — valid for 60 days.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-              <CreditPackCard
-                credits={200}
-                price="$4.99"
-                perCredit="$0.025"
-              />
-              <CreditPackCard
-                credits={400}
-                price="$11.99"
-                perCredit="$0.030"
-                bestValue
-              />
-              <CreditPackCard
-                credits={700}
-                price="$19.99"
-                perCredit="$0.029"
-              />
+              {creditPacks.map((pack) => (
+                <CreditPackCard
+                  key={pack.id}
+                  credits={pack.credits}
+                  price={`$${pack.price_usd.toFixed(2)}`}
+                  perCredit={`$${(pack.price_cents / 100 / pack.credits).toFixed(3)}`}
+                  bestValue={pack.popular}
+                />
+              ))}
             </div>
             <p className="text-center text-gray-500 mt-6 text-sm">
               Purchased credits are valid for 60 days and work with any plan.{" "}
@@ -264,7 +254,7 @@ export default function Home() {
             />
             <FAQItem
               question="What are credit packs?"
-              answer="Credit packs are one-time purchases (200, 400, or 700 credits) that add credits to your account instantly. Purchased credits are valid for 60 days and work alongside any subscription plan. If you buy another pack before your credits expire, the expiry window is extended."
+              answer={`Credit packs are one-time purchases (${creditPacks.length ? creditPacks.map((p) => p.credits.toLocaleString()).join(", ").replace(/,([^,]*)$/, ", or$1") : "150, 400, or 700"} credits) that add credits to your account instantly. Purchased credits are valid for 60 days and work alongside any subscription plan. If you buy another pack before your credits expire, the expiry window is extended.`}
             />
             <FAQItem
               question="Do you offer annual billing?"

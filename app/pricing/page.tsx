@@ -54,13 +54,13 @@ function buildFaqItems(
     ? `~$${(premium.price_monthly / 100 / premium.monthly_credits).toFixed(3)}`
     : "~$0.015";
 
-  // Build pack sizes string (e.g., "200, 400, or 700 credits")
+  // Build pack sizes string (e.g., "150, 400, or 700 credits")
   const packSizes = creditPacks.length
     ? creditPacks
         .map((p) => p.credits.toLocaleString())
         .join(", ")
         .replace(/,([^,]*)$/, ", or$1")
-    : "200, 400, or 700";
+    : "150, 400, or 700";
 
   return [
     {

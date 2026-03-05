@@ -134,7 +134,27 @@ import {
   SaveJobAsApplicationRequest,
 } from "@/lib/types";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000/api/v1";
+// Dynamically determine API URL based on environment
+const API_BASE_URL = (() => {
+  // Explicit env var always wins
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return process.env.NEXT_PUBLIC_API_BASE_URL;
+  }
+  // On the server side (SSR), use localhost
+  if (typeof window === "undefined") {
+    return "http://localhost:8000/api/v1";
+  }
+  // On the client side, derive from the current hostname
+  // For tunnels (ngrok, tailscale, etc.), this will resolve to tunnel-hostname:8000
+  const { protocol, hostname } = window.location;
+  // For localhost development, keep as localhost:8000
+  // For tunnels, this becomes tunnel-hostname:8000
+  const host =
+    hostname === "localhost" || hostname === "127.0.0.1"
+      ? "localhost"
+      : hostname;
+  return `${protocol}//${host}:8000/api/v1`;
+})();
 const JWT_STORAGE_KEY = process.env.NEXT_PUBLIC_JWT_STORAGE_KEY || "careerpilot_token";
 const REFRESH_TOKEN_KEY = "careerpilot_refresh_token";
 
