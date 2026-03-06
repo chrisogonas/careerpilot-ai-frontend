@@ -697,7 +697,7 @@ function MockInterviewContent() {
 
   if (view === "interview") {
     return (
-      <div className="fixed inset-0 bg-slate-50 flex flex-col">
+      <div className="fixed left-0 right-0 bottom-0 top-16 bg-slate-50 flex flex-col">
         {/* Header bar — at top */}
         <div className="bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between flex-shrink-0">
           <div>
