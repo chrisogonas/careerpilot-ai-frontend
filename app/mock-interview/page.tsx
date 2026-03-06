@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
 import { Resume, InterviewAccessResponse, InterviewRespondResponse, InterviewFeedback, InterviewSessionSummary, InterviewSessionOut } from "@/lib/types";
 
@@ -39,6 +39,7 @@ function scoreBg(score: number): string {
 export default function MockInterviewPage() {
   const { user, isAuthenticated, isLoading: authLoading, getResumes } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // ── State: Page view
   const [view, setView] = useState<PageView>("setup");
@@ -126,6 +127,19 @@ export default function MockInterviewPage() {
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // ── Pre-fill from query params (from job search)
+  useEffect(() => {
+    if (!searchParams) return;
+    const desc = searchParams.get('jobDescription');
+    const role = searchParams.get('targetRole');
+    const company = searchParams.get('companyName');
+    const url = searchParams.get('jobUrl');
+    if (desc) setJobDescription(desc);
+    if (role) setTargetRole(role);
+    if (company) setCompanyName(company);
+    if (url) setJobUrl(url);
+  }, [searchParams]);
 
   // ── Ref to always track latest currentAnswer for speech recognition ────
   const currentAnswerRef = useRef(currentAnswer);

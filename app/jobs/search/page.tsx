@@ -548,6 +548,19 @@ export default function JobSearchPage() {
                   >
                     ✂️ Tailor Resume for this Job
                   </button>
+                  <button
+                    onClick={() => {
+                      const params = new URLSearchParams();
+                      if (job.description) params.set("jobDescription", job.description.slice(0, 4000));
+                      if (job.title) params.set("targetRole", job.title);
+                      if (job.company) params.set("companyName", job.company);
+                      if (job.apply_link) params.set("jobUrl", job.apply_link);
+                      window.open(`/mock-interview?${params.toString()}`, "_blank");
+                    }}
+                    className="px-4 py-1.5 border border-purple-300 dark:border-purple-600 text-purple-700 dark:text-purple-300 text-sm rounded-lg hover:bg-purple-50 dark:hover:bg-purple-900/30 transition"
+                  >
+                    🎤 Do Mock Interview for this Job
+                  </button>
                 </div>
               </div>
             );
