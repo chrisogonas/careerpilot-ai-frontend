@@ -697,9 +697,9 @@ function MockInterviewContent() {
 
   if (view === "interview") {
     return (
-      <div className="h-screen bg-slate-50 flex flex-col">
-        {/* Header bar — fixed at top */}
-        <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between">
+      <div className="fixed inset-0 bg-slate-50 flex flex-col">
+        {/* Header bar — at top */}
+        <div className="bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between flex-shrink-0">
           <div>
             <h1 className="font-bold text-gray-900 text-lg">
               Mock Interview {targetRole && `— ${targetRole}`}
@@ -727,8 +727,8 @@ function MockInterviewContent() {
           </div>
         </div>
 
-        {/* Chat area — with top padding for fixed header and bottom padding for fixed input */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 max-w-4xl mx-auto w-full pt-24 pb-40">
+        {/* Chat area — scrollable middle section */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 max-w-4xl mx-auto w-full">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
               {error}
@@ -799,9 +799,9 @@ function MockInterviewContent() {
           </div>
         </div>
 
-        {/* Input area — fixed at bottom */}
+        {/* Input area — at bottom */}
         {!isComplete && (
-          <div className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t shadow-md px-4 py-4">
+          <div className="bg-white border-t shadow-md px-4 py-4 flex-shrink-0">
             <div className="max-w-4xl mx-auto">
               <div className="flex items-end gap-3">
                 {interviewMode === "audio" && (
