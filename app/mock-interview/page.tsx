@@ -725,7 +725,7 @@ export default function MockInterviewPage() {
                         <span className={`font-bold ${scoreColor(m.score)}`}>{m.score}/10</span>
                       )}
                     </div>
-                    <p className="text-purple-800">{m.feedback}</p>
+                    <p className="text-purple-800 text-sm">{m.feedback}</p>
                   </div>
                 )}
 
@@ -740,11 +740,11 @@ export default function MockInterviewPage() {
                       }`}
                     >
                       {m.role === "interviewer" && m.questionType && (
-                        <span className="text-xs font-medium text-blue-500 uppercase tracking-wide block mb-1">
+                        <span className="text-xs font-medium text-blue-500 uppercase tracking-wide block mb-2">
                           {m.questionType}
                         </span>
                       )}
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{m.content}</p>
+                      <p className="whitespace-pre-wrap text-base leading-relaxed">{m.content}</p>
                     </div>
                   </div>
                 )}
