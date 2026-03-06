@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
@@ -37,6 +37,14 @@ function scoreBg(score: number): string {
 // ─── Component ──────────────────────────────────────────────────────────────
 
 export default function MockInterviewPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><div className="text-gray-500">Loading…</div></div>}>
+      <MockInterviewContent />
+    </Suspense>
+  );
+}
+
+function MockInterviewContent() {
   const { user, isAuthenticated, isLoading: authLoading, getResumes } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -690,8 +698,8 @@ export default function MockInterviewPage() {
   if (view === "interview") {
     return (
       <div className="h-screen bg-slate-50 flex flex-col">
-        {/* Header bar — sticky */}
-        <div className="sticky top-0 z-20 bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between">
+        {/* Header bar — fixed at top */}
+        <div className="fixed top-0 left-0 right-0 z-20 bg-white border-b shadow-sm px-4 py-3 flex items-center justify-between">
           <div>
             <h1 className="font-bold text-gray-900 text-lg">
               Mock Interview {targetRole && `— ${targetRole}`}
@@ -719,8 +727,8 @@ export default function MockInterviewPage() {
           </div>
         </div>
 
-        {/* Chat area */}
-        <div className="flex-1 overflow-y-auto px-4 py-6 max-w-4xl mx-auto w-full">
+        {/* Chat area — with top padding for fixed header and bottom padding for fixed input */}
+        <div className="flex-1 overflow-y-auto px-4 py-6 max-w-4xl mx-auto w-full pt-24 pb-40">
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded mb-4">
               {error}
@@ -791,9 +799,9 @@ export default function MockInterviewPage() {
           </div>
         </div>
 
-        {/* Input area */}
+        {/* Input area — fixed at bottom */}
         {!isComplete && (
-          <div className="bg-white border-t shadow-sm px-4 py-4">
+          <div className="fixed bottom-0 left-0 right-0 z-20 bg-white border-t shadow-md px-4 py-4">
             <div className="max-w-4xl mx-auto">
               <div className="flex items-end gap-3">
                 {interviewMode === "audio" && (
