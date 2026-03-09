@@ -273,7 +273,7 @@ export default function Home() {
       </div>
 
       {/* Blog & Resources Section */}
-      <div className="bg-slate-50 py-20">
+      <div id="resources" className="bg-slate-50 py-20">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
             Career Resources & Blog
@@ -286,37 +286,37 @@ export default function Home() {
               icon="📚"
               title="Resume Best Practices"
               description="Learn how to structure your resume, optimize for ATS systems, and highlight your achievements effectively."
-              link="#"
+              link="/resources/resume-best-practices"
             />
             <ResourceCard
               icon="💼"
               title="Job Search Strategies"
               description="Discover proven techniques to find the right jobs, customize applications, and stand out to recruiters."
-              link="#"
+              link="/resources/job-search-strategies"
             />
             <ResourceCard
               icon="🎤"
               title="Interview Preparation"
               description="Master the STAR method, prepare behavioral stories, and boost your confidence before the big day."
-              link="#"
+              link="/resources/interview-preparation"
             />
             <ResourceCard
               icon="🔍"
               title="Beating ATS Systems"
               description="Understand how Applicant Tracking Systems work and learn strategies to get your resume past the filters."
-              link="#"
+              link="/resources/beating-ats-systems"
             />
             <ResourceCard
               icon="✍️"
               title="Cover Letter Guides"
               description="Write compelling cover letters that grab attention and complement your resume perfectly."
-              link="#"
+              link="/resources/cover-letter-guides"
             />
             <ResourceCard
               icon="🎯"
               title="Career Development"
               description="Advance your career with tips on skill development, networking, and career transitions."
-              link="#"
+              link="/resources/career-development"
             />
           </div>
         </div>

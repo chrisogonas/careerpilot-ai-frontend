@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { apiClient } from "@/lib/utils/api";
 import Link from "next/link";
 import { ProfileData } from "@/lib/types";
+import EmailOAuthConnect from "@/app/components/email/EmailOAuthConnect";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -196,6 +197,15 @@ export default function ProfilePage() {
               🗑️ Delete Account
             </button>
           </div>
+        </div>
+
+        {/* Connected Email Accounts */}
+        <div className="bg-white rounded-lg shadow-lg p-8 mb-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Connected Email Accounts</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Connect your Gmail or Outlook account to send job application emails directly from CareerPilot.
+          </p>
+          <EmailOAuthConnect />
         </div>
 
         {/* Additional Information */}

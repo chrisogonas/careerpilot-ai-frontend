@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, CreditPack, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics, GetApplicationResponse, CreateReminderPayload, Reminder, DueRemindersResponse, RemindersListResponse, SnoozeDuration, EmailQuotaResponse, TodoItem, TodoSubtask, TodoReminder, TodoListResponse, CreateTodoPayload, UpdateTodoPayload, CreateTodoReminderPayload, DueTodoRemindersResponse, TodoStatus, TodoCategory, TodoPriority } from "@/lib/types";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, CreditPack, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics, GetApplicationResponse, CreateReminderPayload, UpdateReminderPayload, Reminder, DueRemindersResponse, RemindersListResponse, SnoozeDuration, EmailQuotaResponse, TodoItem, TodoSubtask, TodoReminder, TodoListResponse, CreateTodoPayload, UpdateTodoPayload, CreateTodoReminderPayload, DueTodoRemindersResponse, TodoStatus, TodoCategory, TodoPriority } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
 import { useInactivityTimeout } from "@/lib/hooks/useInactivityTimeout";
 
@@ -765,6 +765,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const updateReminder = async (reminderId: string, payload: UpdateReminderPayload): Promise<Reminder> => {
+    try {
+      return await apiClient.updateReminder(reminderId, payload);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update reminder";
+      setError(message);
+      throw err;
+    }
+  };
+
   const getEmailQuota = async (): Promise<EmailQuotaResponse> => {
     try {
       return await apiClient.getEmailQuota();
@@ -1024,6 +1034,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     snoozeReminder,
     completeReminder,
     deleteReminder,
+    updateReminder,
     getEmailQuota,
     getAnalytics,
     getTodos,

@@ -1387,6 +1387,78 @@ function TailorResumeContent() {
                       Add this to my job applications
                     </button>
                   </div>
+
+                  {/* Ready to Apply? — Email Apply Buttons */}
+                  <div className="mt-6 p-5 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
+                    <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2 mb-3">
+                      <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                        />
+                      </svg>
+                      Ready to Apply?
+                    </h3>
+                    <p className="text-sm text-gray-600 mb-4">
+                      Send your application email directly — your documents will be attached as PDFs.
+                    </p>
+                    <div className="flex flex-col gap-3">
+                      <button
+                        type="button"
+                        disabled={!coverLetterResult}
+                        onClick={() => {
+                          sessionStorage.setItem(
+                            "tailor_apply_data",
+                            JSON.stringify({
+                              job_title: targetRole,
+                              company_name: companyName,
+                              job_description: jobDescription,
+                              resume_text: getCleanResume(result.tailored_resume),
+                              cover_letter_text: coverLetterResult,
+                              resume_id: selectedResumeId || undefined,
+                            })
+                          );
+                          window.open("/tailor/apply?mode=with_cover_letter", "_blank");
+                        }}
+                        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
+                          />
+                        </svg>
+                        Apply with Resume &amp; Cover Letter
+                      </button>
+                      {!coverLetterResult && (
+                        <p className="text-xs text-gray-400 -mt-1 ml-1">
+                          Generate a cover letter above to enable this option
+                        </p>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          sessionStorage.setItem(
+                            "tailor_apply_data",
+                            JSON.stringify({
+                              job_title: targetRole,
+                              company_name: companyName,
+                              job_description: jobDescription,
+                              resume_text: getCleanResume(result.tailored_resume),
+                              resume_id: selectedResumeId || undefined,
+                            })
+                          );
+                          window.open("/tailor/apply?mode=resume_only", "_blank");
+                        }}
+                        className="w-full bg-white border-2 border-blue-600 text-blue-600 hover:bg-blue-50 py-3 rounded-lg font-medium transition flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                          />
+                        </svg>
+                        Apply with Resume Only
+                      </button>
+                    </div>
+                  </div>
                 </>
               )}
             </div>

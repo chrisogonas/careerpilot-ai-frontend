@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { JobApplication, JobApplicationStatus } from "@/lib/types";
+import Pagination from "@/app/components/Pagination";
 
 type ViewMode = "cards" | "table";
 type AppSortField = "job_title" | "company_name" | "status" | "applied_date" | "location" | "created_at";
@@ -24,6 +25,10 @@ export default function ApplicationsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<AppSortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     if (isLoading) return;
@@ -121,6 +126,17 @@ export default function ApplicationsPage() {
     });
     return list;
   }, [applications, filterStatus, searchQuery, sortField, sortDir]);
+
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchQuery, sortField, sortDir]);
+
+  const totalPages = Math.ceil(filteredApplications.length / pageSize);
+  const paginatedApplications = filteredApplications.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const toggleSort = (field: AppSortField) => {
     if (sortField === field) {
@@ -231,7 +247,7 @@ export default function ApplicationsPage() {
             {/* === Card View === */}
             {viewMode === "cards" && (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {filteredApplications.map(app => (
+                {paginatedApplications.map(app => (
                   <div
                     key={app.id}
                     className="bg-white rounded-lg p-6 shadow hover:shadow-lg transition border border-slate-200"
@@ -314,7 +330,7 @@ export default function ApplicationsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredApplications.map(app => (
+                    {paginatedApplications.map(app => (
                       <tr
                         key={app.id}
                         className="hover:bg-slate-50 cursor-pointer transition"
@@ -356,6 +372,16 @@ export default function ApplicationsPage() {
                 </table>
               </div>
             )}
+
+            {/* Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredApplications.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            />
           </>
         ) : (
           <div className="bg-white rounded-lg p-12 text-center border border-slate-200">

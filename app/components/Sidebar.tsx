@@ -29,8 +29,8 @@ const NAV_GROUPS: NavGroup[] = [
     title: 'Main',
     items: [
       { label: 'Dashboard', href: '/dashboard', icon: '🏠', authOnly: true },
-      { label: 'Tailor Resume', href: '/tailor', icon: '✂️', authOnly: true },
       { label: 'My Resumes', href: '/resumes', icon: '📄', authOnly: true },
+      { label: 'Tailor Resume', href: '/tailor', icon: '✂️', authOnly: true },
       { label: 'Applications', href: '/applications', icon: '💼', authOnly: true },
       { label: 'Job Search', href: '/jobs/search', icon: '🔍', authOnly: true },
       { label: 'Mock Interview', href: '/mock-interview', icon: '🎤', authOnly: true },
@@ -189,8 +189,11 @@ export default function Sidebar() {
           <div className="ml-auto">
             <Link
               href="/auth/login"
-              className="px-4 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition"
+              className="inline-flex items-center gap-1.5 px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 text-sm font-semibold tracking-wide shadow-sm hover:shadow-md transition-all duration-200"
             >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
+              </svg>
               Sign In
             </Link>
           </div>
@@ -291,11 +294,12 @@ export default function Sidebar() {
                   {item.label}
                 </Link>
               ))}
-              <div className="mx-2 mt-4">
+              <div className="mx-2 mt-1">
                 <Link
                   href="/auth/login"
-                  className="block text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition"
+                  className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition text-gray-700 hover:bg-gray-100 hover:text-blue-600"
                 >
+                  <span className="text-base w-5 text-center">🔑</span>
                   Sign In
                 </Link>
               </div>

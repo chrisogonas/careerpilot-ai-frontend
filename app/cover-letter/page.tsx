@@ -211,40 +211,10 @@ export default function CoverLetterPage() {
                 </p>
               </div>
 
-              {/* Company Name + Role Title */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Company Name *
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    value={companyName}
-                    onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="e.g., Acme Corporation"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Role Title *
-                  </label>
-                  <input
-                    required
-                    type="text"
-                    value={roleTitle}
-                    onChange={(e) => setRoleTitle(e.target.value)}
-                    placeholder="e.g., Senior Software Engineer"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-
               {/* Job URL Auto-Extract */}
               <div className="bg-gradient-to-r from-cyan-50 to-blue-50 border border-cyan-200 rounded-lg p-4">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Or paste a job posting URL
+                  Job Posting URL
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -279,6 +249,36 @@ export default function CoverLetterPage() {
                 <p className="text-gray-500 text-xs mt-1">
                   Supports LinkedIn, Indeed, Glassdoor, and most job boards
                 </p>
+              </div>
+
+              {/* Company Name + Role Title */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Company Name *
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    value={companyName}
+                    onChange={(e) => setCompanyName(e.target.value)}
+                    placeholder="e.g., Acme Corporation"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Role Title *
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    value={roleTitle}
+                    onChange={(e) => setRoleTitle(e.target.value)}
+                    placeholder="e.g., Senior Software Engineer"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
 
               {/* Job Description */}

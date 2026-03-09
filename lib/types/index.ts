@@ -653,6 +653,7 @@ export interface FollowUp {
   scheduled_date?: string;
   completed_date?: string;
   created_at: string;
+  reminders: Reminder[];
 }
 
 export interface CreateApplicationPayload {
@@ -745,6 +746,19 @@ export interface CreateReminderPayload {
   title?: string;
   email_enabled?: boolean;
   email_reminder_date?: string;
+}
+
+export interface UpdateReminderPayload {
+  title?: string;
+  reminder_date?: string;
+  next_reminder_date?: string;
+  reminder_type?: ReminderType;
+  recurrence_interval?: RecurrenceInterval;
+  recurrence_end_date?: string | null;
+  recurrence_count?: number | null;
+  email_enabled?: boolean;
+  email_reminder_date?: string | null;
+  status?: ReminderStatus;
 }
 
 export interface EmailQuotaResponse {
@@ -1579,6 +1593,119 @@ export interface SaveJobAsApplicationRequest {
   source?: string;
 }
 
+// ============================================================================
+// EMAIL OAUTH TYPES (Phase 4)
+// ============================================================================
+
+export type EmailOAuthProvider = "gmail" | "outlook";
+
+export interface EmailOAuthAuthorizeResponse {
+  authorization_url: string;
+  provider: EmailOAuthProvider;
+  state: string;
+}
+
+export interface EmailOAuthCallbackResponse {
+  success: boolean;
+  provider: EmailOAuthProvider;
+  email: string;
+  message?: string;
+  error?: string;
+}
+
+export interface ConnectedEmailProvider {
+  provider: EmailOAuthProvider;
+  email: string;
+  connected_at: string;
+}
+
+export interface ConnectedProvidersResponse {
+  connected_providers: ConnectedEmailProvider[];
+  count: number;
+}
+
+export interface DisconnectProviderResponse {
+  success: boolean;
+  provider: EmailOAuthProvider;
+  message: string;
+}
+
+export interface EmailDraftResponse {
+  app_id: string;
+  job_title: string;
+  company_name: string;
+  recipient_email: string;
+  subject: string;
+  body: string;
+  has_resume: boolean;
+  has_cover_letter: boolean;
+  resume_name?: string;
+  cover_letter_name?: string;
+  job_url?: string;
+  job_description?: string;
+  cover_letter_text?: string;
+  resumes?: Resume[];
+}
+
+export interface SendApplicationEmailPayload {
+  provider: EmailOAuthProvider;
+  recipient_email: string;
+  subject: string;
+  body: string;
+  include_resume?: boolean;
+  include_cover_letter?: boolean;
+  selected_resume_id?: string;
+  resume_text?: string;
+  cover_letter_text?: string;
+}
+
+export interface SendApplicationEmailResponse {
+  success: boolean;
+  message: string;
+  app_id: string;
+  provider: EmailOAuthProvider;
+  applied_at: string;
+  status: string;
+}
+
+export interface TailorApplyPayload {
+  provider: EmailOAuthProvider;
+  recipient_email: string;
+  subject: string;
+  body: string;
+  job_title: string;
+  company_name: string;
+  job_description?: string;
+  job_url?: string;
+  resume_text: string;
+  cover_letter_text?: string;
+  resume_id?: string;
+}
+
+export interface TailorApplyResponse {
+  success: boolean;
+  message: string;
+  app_id: string;
+  provider: EmailOAuthProvider;
+  applied_at: string;
+  status: string;
+}
+
+export interface GenerateApplyBodyPayload {
+  job_title: string;
+  company_name: string;
+  include_cover_letter: boolean;
+  user_name?: string;
+  resume_text?: string;
+  job_description?: string;
+}
+
+export interface GenerateApplyBodyResponse {
+  body: string;
+  subject: string;
+  credits_remaining?: number;
+}
+
 // Auth Context Types
 export interface AuthContextType {
   user: User | null;
@@ -1632,6 +1759,7 @@ export interface AuthContextType {
   snoozeReminder: (reminderId: string, duration: SnoozeDuration) => Promise<Reminder>;
   completeReminder: (reminderId: string) => Promise<Reminder>;
   deleteReminder: (reminderId: string) => Promise<void>;
+  updateReminder: (reminderId: string, payload: UpdateReminderPayload) => Promise<Reminder>;
   getEmailQuota: () => Promise<EmailQuotaResponse>;
   getAnalytics: () => Promise<UserAnalytics>;
   // Todos (Pro/Premium)

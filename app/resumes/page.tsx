@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Resume } from "@/lib/types";
+import Pagination from "@/app/components/Pagination";
 
 type ViewMode = "cards" | "table";
 type SortField = "title" | "status" | "version" | "tailor_count" | "created_at" | "last_used_at";
@@ -25,6 +26,10 @@ export default function ResumesPage() {
   const [filterStatus, setFilterStatus] = useState<"all" | Resume["status"]>("all");
   const [sortField, setSortField] = useState<SortField>("created_at");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   useEffect(() => {
     if (isLoading) return;
@@ -117,6 +122,17 @@ export default function ResumesPage() {
     return list;
   }, [resumes, filterStatus, searchQuery, sortField, sortDir]);
 
+  // Reset to page 1 when filters/search change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filterStatus, searchQuery, sortField, sortDir]);
+
+  const totalPages = Math.ceil(filteredResumes.length / pageSize);
+  const paginatedResumes = filteredResumes.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   const toggleSort = (field: SortField) => {
     if (sortField === field) {
       setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -204,10 +220,11 @@ export default function ResumesPage() {
         {/* Content */}
         {resumes.length > 0 ? (
           filteredResumes.length > 0 ? (
-            viewMode === "cards" ? (
+            <>
+            {viewMode === "cards" ? (
               /* ───── Cards View ───── */
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredResumes.map((resume) => (
+                {paginatedResumes.map((resume) => (
               <div
                 key={resume.id}
                 className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden border border-gray-200"
@@ -314,7 +331,7 @@ export default function ResumesPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredResumes.map((resume) => (
+                    {paginatedResumes.map((resume) => (
                       <tr
                         key={resume.id}
                         className="hover:bg-blue-50 transition cursor-pointer"
@@ -373,7 +390,18 @@ export default function ResumesPage() {
                   </tbody>
                 </table>
               </div>
-            )
+            )}
+
+            {/* Pagination */}
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filteredResumes.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+            />
+          </>
           ) : (
             /* No results for current filter */
             <div className="text-center py-12 bg-white rounded-lg border border-gray-200">

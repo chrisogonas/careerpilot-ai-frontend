@@ -77,6 +77,7 @@ import {
   AddFollowUpResponse,
   FollowUp,
   CreateReminderPayload,
+  UpdateReminderPayload,
   Reminder,
   DueRemindersResponse,
   RemindersListResponse,
@@ -132,6 +133,18 @@ import {
   SaveJobSearchRequest,
   SavedJobSearchListResponse,
   SaveJobAsApplicationRequest,
+  EmailOAuthAuthorizeResponse,
+  EmailOAuthCallbackResponse,
+  ConnectedProvidersResponse,
+  DisconnectProviderResponse,
+  EmailDraftResponse,
+  SendApplicationEmailPayload,
+  SendApplicationEmailResponse,
+  EmailOAuthProvider,
+  TailorApplyPayload,
+  TailorApplyResponse,
+  GenerateApplyBodyPayload,
+  GenerateApplyBodyResponse,
 } from "@/lib/types";
 
 // Dynamically determine API URL based on environment
@@ -933,6 +946,7 @@ class ApiClient {
       note: payload.note,
       status: payload.status || "pending",
       created_at: data.created_at,
+      reminders: [],
     };
   }
 
@@ -1008,6 +1022,15 @@ class ApiClient {
       headers: this.getHeaders(),
     });
     await this.handleResponse(response);
+  }
+
+  async updateReminder(reminderId: string, payload: UpdateReminderPayload): Promise<Reminder> {
+    const response = await fetch(`${this.baseURL}/reminders/${reminderId}`, {
+      method: "PATCH",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<Reminder>(response);
   }
 
   async getEmailQuota(): Promise<EmailQuotaResponse> {
@@ -1648,6 +1671,85 @@ class ApiClient {
       body: JSON.stringify(payload),
     });
     return this.handleResponse<{ application_id: string; message: string }>(response);
+  }
+
+  // ============================================================================
+  // EMAIL OAUTH ENDPOINTS (Phase 4)
+  // ============================================================================
+
+  async authorizeEmailOAuth(provider: EmailOAuthProvider): Promise<EmailOAuthAuthorizeResponse> {
+    const response = await fetch(`${this.baseURL}/email/oauth/authorize/${provider}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<EmailOAuthAuthorizeResponse>(response);
+  }
+
+  async handleGoogleOAuthCallback(code: string, state: string): Promise<EmailOAuthCallbackResponse> {
+    const response = await fetch(`${this.baseURL}/email/oauth/google/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<EmailOAuthCallbackResponse>(response);
+  }
+
+  async handleOutlookOAuthCallback(code: string, state: string): Promise<EmailOAuthCallbackResponse> {
+    const response = await fetch(`${this.baseURL}/email/oauth/outlook/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<EmailOAuthCallbackResponse>(response);
+  }
+
+  async getConnectedEmailProviders(): Promise<ConnectedProvidersResponse> {
+    const response = await fetch(`${this.baseURL}/email/connected-providers`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ConnectedProvidersResponse>(response);
+  }
+
+  async disconnectEmailProvider(provider: EmailOAuthProvider): Promise<DisconnectProviderResponse> {
+    const response = await fetch(`${this.baseURL}/email/disconnect/${provider}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<DisconnectProviderResponse>(response);
+  }
+
+  async getEmailDraft(applicationId: string): Promise<EmailDraftResponse> {
+    const response = await fetch(`${this.baseURL}/email/applications/${applicationId}/draft`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<EmailDraftResponse>(response);
+  }
+
+  async sendApplicationEmail(applicationId: string, payload: SendApplicationEmailPayload): Promise<SendApplicationEmailResponse> {
+    const response = await fetch(`${this.baseURL}/email/applications/${applicationId}/send`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<SendApplicationEmailResponse>(response);
+  }
+
+  async tailorApply(payload: TailorApplyPayload): Promise<TailorApplyResponse> {
+    const response = await fetch(`${this.baseURL}/email/tailor-apply`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<TailorApplyResponse>(response);
+  }
+
+  async generateApplyBody(payload: GenerateApplyBodyPayload): Promise<GenerateApplyBodyResponse> {
+    const response = await fetch(`${this.baseURL}/email/generate-apply-body`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return this.handleResponse<GenerateApplyBodyResponse>(response);
   }
 }
 

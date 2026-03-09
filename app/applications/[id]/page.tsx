@@ -4,14 +4,15 @@ import { useEffect, useState, useRef, Suspense } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
-import { JobApplication, FollowUp, UpdateApplicationPayload, AddFollowUpPayload, JobApplicationStatus, Resume, ReminderType, RecurrenceInterval, CreateReminderPayload, EmailQuotaResponse, ReminderTimingMode, ReminderBeforeUnit } from "@/lib/types";
+import { JobApplication, FollowUp, UpdateApplicationPayload, AddFollowUpPayload, JobApplicationStatus, Resume, ReminderType, RecurrenceInterval, CreateReminderPayload, UpdateReminderPayload, Reminder, EmailQuotaResponse, ReminderTimingMode, ReminderBeforeUnit } from "@/lib/types";
+import ApplicationEmailModal from "@/app/components/email/ApplicationEmailModal";
 
 function ApplicationDetailContent() {
   const router = useRouter();
   const params = useParams();
   const applicationId = params.id as string;
   
-  const { isAuthenticated, isLoading: authLoading, getApplication, updateApplication, addFollowUp, deleteFollowUp, getResumes, createReminder, getEmailQuota, getSubscription, subscription, currentPlan } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user, getApplication, updateApplication, addFollowUp, deleteFollowUp, getResumes, createReminder, updateReminder, deleteReminder, getEmailQuota, getSubscription, subscription, currentPlan } = useAuth();
   const [application, setApplication] = useState<JobApplication | null>(null);
   const [followUps, setFollowUps] = useState<FollowUp[]>([]);
   const [isEditing, setIsEditing] = useState(false);
@@ -27,6 +28,8 @@ function ApplicationDetailContent() {
   const [savedResumes, setSavedResumes] = useState<Resume[]>([]);
 
   const [editData, setEditData] = useState<UpdateApplicationPayload>({});
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailModalMode, setEmailModalMode] = useState<"apply" | "forward">("apply");
   const [followUpData, setFollowUpData] = useState<AddFollowUpPayload>({
     follow_up_type: "email",
     note: "",
@@ -60,6 +63,44 @@ function ApplicationDetailContent() {
   const [customEmailDate, setCustomEmailDate] = useState("");
 
   const isPaidPlan = subscription && currentPlan && currentPlan.name !== "free" && ["active", "trialing"].includes(subscription.status);
+
+  // Reminder management on existing follow-ups
+  const [editingReminderId, setEditingReminderId] = useState<string | null>(null);
+  const [addingReminderToFollowUpId, setAddingReminderToFollowUpId] = useState<string | null>(null);
+  const [reminderSaving, setReminderSaving] = useState(false);
+  const [editReminderData, setEditReminderData] = useState<UpdateReminderPayload>({});
+  const [newReminderDate, setNewReminderDate] = useState("");
+  const [newReminderType, setNewReminderType] = useState<ReminderType>("once");
+  const [newRecurrenceInterval, setNewRecurrenceInterval] = useState<RecurrenceInterval>("weekly");
+  const [newEmailEnabled, setNewEmailEnabled] = useState(false);
+
+  // Edit-reminder timing & recurrence state (mirrors creation form)
+  const [editBaseDate, setEditBaseDate] = useState("");
+  const [editTimingMode, setEditTimingMode] = useState<ReminderTimingMode>("at_event");
+  const [editBeforeAmount, setEditBeforeAmount] = useState(1);
+  const [editBeforeUnit, setEditBeforeUnit] = useState<ReminderBeforeUnit>("days");
+  const [editCustomDate, setEditCustomDate] = useState("");
+  const [editRecurrenceEndMode, setEditRecurrenceEndMode] = useState<"never" | "count" | "date">("never");
+  const [editRecurrenceCount, setEditRecurrenceCount] = useState(5);
+  const [editRecurrenceEndDate, setEditRecurrenceEndDate] = useState("");
+  const [editEmailTimingMode, setEditEmailTimingMode] = useState<ReminderTimingMode>("at_event");
+  const [editEmailBeforeAmount, setEditEmailBeforeAmount] = useState(1);
+  const [editEmailBeforeUnit, setEditEmailBeforeUnit] = useState<ReminderBeforeUnit>("days");
+  const [editCustomEmailDate, setEditCustomEmailDate] = useState("");
+
+  // Add-reminder timing & recurrence state (mirrors creation form)
+  const [newReminderTitle, setNewReminderTitle] = useState("");
+  const [newTimingMode, setNewTimingMode] = useState<ReminderTimingMode>("at_event");
+  const [newBeforeAmount, setNewBeforeAmount] = useState(1);
+  const [newBeforeUnit, setNewBeforeUnit] = useState<ReminderBeforeUnit>("days");
+  const [newCustomDate, setNewCustomDate] = useState("");
+  const [newRecurrenceEndMode, setNewRecurrenceEndMode] = useState<"never" | "count" | "date">("never");
+  const [newRecurrenceCount, setNewRecurrenceCount] = useState(5);
+  const [newRecurrenceEndDate, setNewRecurrenceEndDate] = useState("");
+  const [newEmailTimingMode, setNewEmailTimingMode] = useState<ReminderTimingMode>("at_event");
+  const [newEmailBeforeAmount, setNewEmailBeforeAmount] = useState(1);
+  const [newEmailBeforeUnit, setNewEmailBeforeUnit] = useState<ReminderBeforeUnit>("days");
+  const [newCustomEmailDate, setNewCustomEmailDate] = useState("");
 
   // Ref for scrolling to the follow-up form from the Actions card
   const followUpSectionRef = useRef<HTMLDivElement>(null);
@@ -106,8 +147,8 @@ function ApplicationDetailContent() {
       try {
         const resumes = await getResumes();
         setSavedResumes(resumes);
-      } catch (err) {
-        console.error("Failed to fetch resumes:", err);
+      } catch {
+        // Non-critical: resumes load lazily for the edit form
       }
     };
     fetchResumes();
@@ -131,8 +172,9 @@ function ApplicationDetailContent() {
         const quota = await getEmailQuota();
         setEmailQuota(quota);
         setEmailQuotaError(null);
-      } catch {
-        console.error("Failed to fetch email quota");
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        setEmailQuotaError(msg);
       }
     };
     fetchQuota();
@@ -225,7 +267,8 @@ function ApplicationDetailContent() {
             ...(reminderType === "recurring" && recurrenceEndMode === "date" && recurrenceEndDate ? { recurrence_end_date: new Date(recurrenceEndDate).toISOString() } : {}),
             ...(emailReminderEnabled ? { email_enabled: true, email_reminder_date: computedEmailDate } : {}),
           };
-          await createReminder(reminderPayload);
+          const createdReminder = await createReminder(reminderPayload);
+          newFollowUp.reminders = [createdReminder];
           // Refresh email quota after creating an email reminder
           if (emailReminderEnabled) {
             try {
@@ -293,6 +336,157 @@ function ApplicationDetailContent() {
       setLocalError(message);
     } finally {
       setDeletingFollowUpId(null);
+    }
+  };
+
+  // --- Reminder management handlers ---
+  const handleDeleteReminder = async (reminderId: string, followUpId: string) => {
+    if (!confirm("Delete this reminder?")) return;
+    setLocalError(null);
+    setReminderSaving(true);
+    try {
+      await deleteReminder(reminderId);
+      setFollowUps(prev => prev.map(fu =>
+        fu.id === followUpId ? { ...fu, reminders: fu.reminders.filter(r => r.id !== reminderId) } : fu
+      ));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to delete reminder";
+      setLocalError(message);
+    } finally {
+      setReminderSaving(false);
+    }
+  };
+
+  const handleStartEditReminder = (reminder: Reminder) => {
+    setEditingReminderId(reminder.id);
+    setEditReminderData({
+      title: reminder.title,
+      reminder_date: reminder.reminder_date,
+      reminder_type: reminder.reminder_type,
+      recurrence_interval: reminder.recurrence_interval || undefined,
+      recurrence_count: reminder.recurrence_count ?? undefined,
+      recurrence_end_date: reminder.recurrence_end_date ?? undefined,
+      email_enabled: reminder.email_enabled,
+      email_reminder_date: reminder.email_reminder_date ?? undefined,
+    });
+    // Initialize timing state — default to "at_event" editing the stored date directly
+    const rd = reminder.reminder_date;
+    setEditBaseDate(rd ? new Date(rd).toISOString().slice(0, 16) : "");
+    setEditTimingMode("at_event");
+    setEditBeforeAmount(1);
+    setEditBeforeUnit("days");
+    setEditCustomDate("");
+    // Recurrence end
+    if (reminder.recurrence_count && reminder.recurrence_count > 0) {
+      setEditRecurrenceEndMode("count");
+      setEditRecurrenceCount(reminder.recurrence_count);
+    } else if (reminder.recurrence_end_date) {
+      setEditRecurrenceEndMode("date");
+      setEditRecurrenceEndDate(new Date(reminder.recurrence_end_date).toISOString().split("T")[0]);
+    } else {
+      setEditRecurrenceEndMode("never");
+      setEditRecurrenceCount(5);
+      setEditRecurrenceEndDate("");
+    }
+    // Email timing — default to "at_event" since we don't store the mode
+    setEditEmailTimingMode("at_event");
+    setEditEmailBeforeAmount(1);
+    setEditEmailBeforeUnit("days");
+    setEditCustomEmailDate(reminder.email_reminder_date ? new Date(reminder.email_reminder_date).toISOString().slice(0, 16) : "");
+  };
+
+  const handleSaveEditReminder = async (followUpId: string) => {
+    if (!editingReminderId || !editBaseDate) return;
+    setLocalError(null);
+    setReminderSaving(true);
+    try {
+      const computedReminderDate = computeDate(editBaseDate, editTimingMode, editBeforeAmount, editBeforeUnit, editCustomDate);
+      const computedEmailDate = editEmailTimingMode === "at_event"
+        ? computedReminderDate
+        : computeDate(editBaseDate, editEmailTimingMode, editEmailBeforeAmount, editEmailBeforeUnit, editCustomEmailDate);
+      const payload: UpdateReminderPayload = {
+        title: editReminderData.title,
+        reminder_date: computedReminderDate,
+        next_reminder_date: computedReminderDate,
+        reminder_type: editReminderData.reminder_type,
+        ...(editReminderData.reminder_type === "recurring" ? { recurrence_interval: editReminderData.recurrence_interval } : {}),
+        ...(editReminderData.reminder_type === "recurring" && editRecurrenceEndMode === "count" ? { recurrence_count: editRecurrenceCount } : { recurrence_count: null }),
+        ...(editReminderData.reminder_type === "recurring" && editRecurrenceEndMode === "date" && editRecurrenceEndDate ? { recurrence_end_date: new Date(editRecurrenceEndDate).toISOString() } : { recurrence_end_date: null }),
+        email_enabled: editReminderData.email_enabled,
+        ...(editReminderData.email_enabled ? { email_reminder_date: computedEmailDate } : { email_reminder_date: null }),
+      };
+      const updated = await updateReminder(editingReminderId, payload);
+      setFollowUps(prev => prev.map(fu =>
+        fu.id === followUpId ? { ...fu, reminders: fu.reminders.map(r => r.id === editingReminderId ? updated : r) } : fu
+      ));
+      setEditingReminderId(null);
+      setEditReminderData({});
+      if (editReminderData.email_enabled) {
+        try { const q = await getEmailQuota(); setEmailQuota(q); } catch { /* ignore */ }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update reminder";
+      setLocalError(message);
+    } finally {
+      setReminderSaving(false);
+    }
+  };
+
+  const resetNewReminderState = () => {
+    setAddingReminderToFollowUpId(null);
+    setNewReminderDate("");
+    setNewReminderTitle("");
+    setNewReminderType("once");
+    setNewRecurrenceInterval("weekly");
+    setNewEmailEnabled(false);
+    setNewTimingMode("at_event");
+    setNewBeforeAmount(1);
+    setNewBeforeUnit("days");
+    setNewCustomDate("");
+    setNewRecurrenceEndMode("never");
+    setNewRecurrenceCount(5);
+    setNewRecurrenceEndDate("");
+    setNewEmailTimingMode("at_event");
+    setNewEmailBeforeAmount(1);
+    setNewEmailBeforeUnit("days");
+    setNewCustomEmailDate("");
+  };
+
+  const handleAddReminderToFollowUp = async (followUpId: string) => {
+    if (!newReminderDate) {
+      setLocalError("Please select a reminder date");
+      return;
+    }
+    setLocalError(null);
+    setReminderSaving(true);
+    try {
+      const computedReminderDate = computeDate(newReminderDate, newTimingMode, newBeforeAmount, newBeforeUnit, newCustomDate);
+      const computedEmailDate = newEmailTimingMode === "at_event"
+        ? computedReminderDate
+        : computeDate(newReminderDate, newEmailTimingMode, newEmailBeforeAmount, newEmailBeforeUnit, newCustomEmailDate);
+      const payload: CreateReminderPayload = {
+        follow_up_id: followUpId,
+        reminder_date: computedReminderDate,
+        reminder_type: newReminderType,
+        ...(newReminderTitle ? { title: newReminderTitle } : {}),
+        ...(newReminderType === "recurring" ? { recurrence_interval: newRecurrenceInterval } : {}),
+        ...(newReminderType === "recurring" && newRecurrenceEndMode === "count" ? { recurrence_count: newRecurrenceCount } : {}),
+        ...(newReminderType === "recurring" && newRecurrenceEndMode === "date" && newRecurrenceEndDate ? { recurrence_end_date: new Date(newRecurrenceEndDate).toISOString() } : {}),
+        ...(newEmailEnabled ? { email_enabled: true, email_reminder_date: computedEmailDate } : {}),
+      };
+      const created = await createReminder(payload);
+      setFollowUps(prev => prev.map(fu =>
+        fu.id === followUpId ? { ...fu, reminders: [...fu.reminders, created] } : fu
+      ));
+      resetNewReminderState();
+      if (newEmailEnabled) {
+        try { const q = await getEmailQuota(); setEmailQuota(q); } catch { /* ignore */ }
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to create reminder";
+      setLocalError(message);
+    } finally {
+      setReminderSaving(false);
     }
   };
 
@@ -375,12 +569,27 @@ function ApplicationDetailContent() {
               {statusLabels[application.status]}
             </span>
           </div>
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
-          >
-            {isEditing ? "Cancel Edit" : "Edit"}
-          </button>
+          <div className="flex gap-2 items-start">
+            <div className="flex flex-col items-center">
+              <button
+                onClick={() => setShowEmailModal(true)}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition"
+              >
+                Apply for this Job
+              </button>
+              {application.applied_date ? (
+                <span className="mt-1 text-xs text-green-700">Applied on {new Date(application.applied_date).toLocaleDateString()}</span>
+              ) : (
+                <span className="mt-1 text-xs text-slate-500">Not yet applied</span>
+              )}
+            </div>
+            <button
+              onClick={() => setIsEditing(!isEditing)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
+            >
+              {isEditing ? "Cancel Edit" : "Edit"}
+            </button>
+          </div>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">
@@ -1019,6 +1228,621 @@ function ApplicationDetailContent() {
                           </button>
                         </div>
                       </div>
+
+                      {/* Reminder Section */}
+                      {followUp.reminders.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-200">
+                          {followUp.reminders.map((reminder, rIdx) => (
+                            <div key={reminder.id} className={rIdx > 0 ? "mt-3 pt-3 border-t border-slate-100" : ""}>
+                              {editingReminderId !== reminder.id ? (
+                                <div className="flex items-start justify-between gap-2">
+                                  <div className="flex-1">
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <svg className="w-4 h-4 text-amber-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                                      </svg>
+                                      <span className="text-sm font-medium text-slate-800">{reminder.title}</span>
+                                      <span className={`px-1.5 py-0.5 rounded text-[10px] font-semibold ${
+                                        reminder.status === "active" ? "bg-green-100 text-green-700"
+                                        : reminder.status === "snoozed" ? "bg-amber-100 text-amber-700"
+                                        : reminder.status === "completed" ? "bg-slate-100 text-slate-600"
+                                        : "bg-red-100 text-red-600"
+                                      }`}>
+                                        {reminder.status}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 ml-6">
+                                      {reminder.next_reminder_date && (
+                                        <span>Next: {new Date(reminder.next_reminder_date).toLocaleString()}</span>
+                                      )}
+                                      <span className="capitalize">{reminder.reminder_type}{reminder.recurrence_interval ? ` (${reminder.recurrence_interval.replace("_", " ")})` : ""}</span>
+                                      {reminder.email_enabled && (
+                                        <span className="inline-flex items-center gap-0.5 text-blue-600">
+                                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                          Email
+                                        </span>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-1 flex-shrink-0">
+                                    <button
+                                      onClick={() => handleStartEditReminder(reminder)}
+                                      disabled={reminderSaving}
+                                      className="p-1 text-slate-400 hover:text-blue-600 transition"
+                                      title="Edit reminder"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                      </svg>
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteReminder(reminder.id, followUp.id)}
+                                      disabled={reminderSaving}
+                                      className="p-1 text-slate-400 hover:text-red-600 transition"
+                                      title="Delete reminder"
+                                    >
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                      </svg>
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                /* ── Full Edit Reminder Form (mirrors creation form) ── */
+                                <div className="space-y-4">
+                          <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            Edit Reminder
+                          </p>
+
+                          {/* Title */}
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Title</label>
+                            <input
+                              type="text"
+                              value={editReminderData.title || ""}
+                              onChange={(e) => setEditReminderData(d => ({ ...d, title: e.target.value }))}
+                              className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                              placeholder="Reminder title"
+                            />
+                          </div>
+
+                          {/* Scheduled / Base Date */}
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Scheduled Date</label>
+                            <input
+                              type="datetime-local"
+                              value={editBaseDate}
+                              onChange={(e) => setEditBaseDate(e.target.value)}
+                              className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            />
+                          </div>
+
+                          {editBaseDate && (
+                            <div className="ml-1 space-y-4">
+                              {/* When to remind (in-app) */}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">When to remind</label>
+                                <div className="space-y-2">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`editRTiming_${followUp.id}`} value="at_event" checked={editTimingMode === "at_event"} onChange={() => setEditTimingMode("at_event")} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">At event time</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`editRTiming_${followUp.id}`} value="before_event" checked={editTimingMode === "before_event"} onChange={() => setEditTimingMode("before_event")} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">Before the event</span>
+                                  </label>
+                                  {editTimingMode === "before_event" && (
+                                    <div className="flex items-center gap-2 ml-6">
+                                      <input type="number" min={1} max={999} value={editBeforeAmount} onChange={(e) => setEditBeforeAmount(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                      <select value={editBeforeUnit} onChange={(e) => setEditBeforeUnit(e.target.value as ReminderBeforeUnit)} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                                        <option value="minutes">minute(s) before</option>
+                                        <option value="hours">hour(s) before</option>
+                                        <option value="days">day(s) before</option>
+                                        <option value="weeks">week(s) before</option>
+                                      </select>
+                                    </div>
+                                  )}
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`editRTiming_${followUp.id}`} value="custom" checked={editTimingMode === "custom"} onChange={() => setEditTimingMode("custom")} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">Custom date &amp; time</span>
+                                  </label>
+                                  {editTimingMode === "custom" && (
+                                    <div className="ml-6">
+                                      <input type="datetime-local" value={editCustomDate} onChange={(e) => setEditCustomDate(e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Computed preview */}
+                                {(() => {
+                                  const ms: Record<string, number> = { minutes: 60_000, hours: 3_600_000, days: 86_400_000, weeks: 604_800_000 };
+                                  let preview = "";
+                                  try {
+                                    if (editTimingMode === "at_event") preview = new Date(editBaseDate).toLocaleString();
+                                    else if (editTimingMode === "before_event") preview = new Date(new Date(editBaseDate).getTime() - editBeforeAmount * ms[editBeforeUnit]).toLocaleString();
+                                    else if (editTimingMode === "custom" && editCustomDate) preview = new Date(editCustomDate).toLocaleString();
+                                  } catch { /* invalid date */ }
+                                  return preview ? (
+                                    <p className="text-xs text-blue-600 mt-1.5 flex items-center gap-1">
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                      Reminder fires: {preview}
+                                    </p>
+                                  ) : null;
+                                })()}
+                              </div>
+
+                              {/* Frequency */}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Frequency</label>
+                                <div className="flex gap-4">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`editRType_${followUp.id}`} value="once" checked={editReminderData.reminder_type === "once"} onChange={() => setEditReminderData(d => ({ ...d, reminder_type: "once" }))} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">Once</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`editRType_${followUp.id}`} value="recurring" checked={editReminderData.reminder_type === "recurring"} onChange={() => setEditReminderData(d => ({ ...d, reminder_type: "recurring" }))} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">Recurring</span>
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Recurrence Interval */}
+                              {editReminderData.reminder_type === "recurring" && (
+                                <div>
+                                  <label className="block text-sm font-medium text-slate-700 mb-1">Repeat Every</label>
+                                  <select
+                                    value={editReminderData.recurrence_interval || "weekly"}
+                                    onChange={(e) => setEditReminderData(d => ({ ...d, recurrence_interval: e.target.value as RecurrenceInterval }))}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                  >
+                                    <option value="daily">Daily</option>
+                                    <option value="every_2_days">Every 2 Days</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="biweekly">Biweekly</option>
+                                    <option value="monthly">Monthly</option>
+                                  </select>
+                                </div>
+                              )}
+
+                              {/* Recurrence End Condition */}
+                              {editReminderData.reminder_type === "recurring" && (
+                                <div>
+                                  <label className="block text-sm font-medium text-slate-700 mb-1">Ends</label>
+                                  <div className="space-y-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name={`editREnd_${followUp.id}`} value="never" checked={editRecurrenceEndMode === "never"} onChange={() => setEditRecurrenceEndMode("never")} className="text-blue-600 focus:ring-blue-500" />
+                                      <span className="text-sm text-slate-700">Never</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name={`editREnd_${followUp.id}`} value="count" checked={editRecurrenceEndMode === "count"} onChange={() => setEditRecurrenceEndMode("count")} className="text-blue-600 focus:ring-blue-500" />
+                                      <span className="text-sm text-slate-700">After</span>
+                                      {editRecurrenceEndMode === "count" && (
+                                        <span className="flex items-center gap-1">
+                                          <input type="number" min={1} max={100} value={editRecurrenceCount} onChange={(e) => setEditRecurrenceCount(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                          <span className="text-sm text-slate-600">times</span>
+                                        </span>
+                                      )}
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name={`editREnd_${followUp.id}`} value="date" checked={editRecurrenceEndMode === "date"} onChange={() => setEditRecurrenceEndMode("date")} className="text-blue-600 focus:ring-blue-500" />
+                                      <span className="text-sm text-slate-700">On date</span>
+                                    </label>
+                                    {editRecurrenceEndMode === "date" && (
+                                      <input type="date" value={editRecurrenceEndDate} onChange={(e) => setEditRecurrenceEndDate(e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm ml-6" min={new Date().toISOString().split("T")[0]} />
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Email Reminder */}
+                              <div className="border-t border-slate-200 pt-3">
+                                {emailQuota && emailQuota.email_reminder_limit > 0 ? (
+                                  <div className="space-y-3">
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={editReminderData.email_enabled || false}
+                                        onChange={(e) => {
+                                          if (e.target.checked && emailQuota && !emailQuota.can_create_email_reminder) {
+                                            setLocalError(`You've reached your limit of ${emailQuota.email_reminder_limit} active email reminders.`);
+                                            return;
+                                          }
+                                          setEditReminderData(d => ({ ...d, email_enabled: e.target.checked }));
+                                        }}
+                                        className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                      />
+                                      <div className="flex items-center gap-2">
+                                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                        <span className="text-sm font-semibold text-slate-900">Also send email reminder</span>
+                                      </div>
+                                    </label>
+                                    <p className="text-xs text-slate-500 ml-7">
+                                      {emailQuota.email_reminders_used}/{emailQuota.email_reminder_limit} email reminders used
+                                      {emailQuota.email_reminders_remaining > 0 && (
+                                        <span className="text-green-600 ml-1">({emailQuota.email_reminders_remaining} remaining)</span>
+                                      )}
+                                    </p>
+
+                                    {editReminderData.email_enabled && (
+                                      <div className="ml-7 space-y-2 bg-blue-50/50 border border-blue-100 rounded-lg p-3">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">When to send email</label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input type="radio" name={`editEmailTiming_${followUp.id}`} value="at_event" checked={editEmailTimingMode === "at_event"} onChange={() => setEditEmailTimingMode("at_event")} className="text-blue-600 focus:ring-blue-500" />
+                                          <span className="text-sm text-slate-700">Same as in-app reminder</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input type="radio" name={`editEmailTiming_${followUp.id}`} value="before_event" checked={editEmailTimingMode === "before_event"} onChange={() => setEditEmailTimingMode("before_event")} className="text-blue-600 focus:ring-blue-500" />
+                                          <span className="text-sm text-slate-700">Before the event</span>
+                                        </label>
+                                        {editEmailTimingMode === "before_event" && (
+                                          <div className="flex items-center gap-2 ml-6">
+                                            <input type="number" min={1} max={999} value={editEmailBeforeAmount} onChange={(e) => setEditEmailBeforeAmount(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                            <select value={editEmailBeforeUnit} onChange={(e) => setEditEmailBeforeUnit(e.target.value as ReminderBeforeUnit)} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                                              <option value="minutes">minute(s) before</option>
+                                              <option value="hours">hour(s) before</option>
+                                              <option value="days">day(s) before</option>
+                                              <option value="weeks">week(s) before</option>
+                                            </select>
+                                          </div>
+                                        )}
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input type="radio" name={`editEmailTiming_${followUp.id}`} value="custom" checked={editEmailTimingMode === "custom"} onChange={() => setEditEmailTimingMode("custom")} className="text-blue-600 focus:ring-blue-500" />
+                                          <span className="text-sm text-slate-700">Custom date &amp; time</span>
+                                        </label>
+                                        {editEmailTimingMode === "custom" && (
+                                          <div className="ml-6">
+                                            <input type="datetime-local" value={editCustomEmailDate} onChange={(e) => setEditCustomEmailDate(e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                          </div>
+                                        )}
+
+                                        {/* Email send-time preview */}
+                                        {(() => {
+                                          const ms: Record<string, number> = { minutes: 60_000, hours: 3_600_000, days: 86_400_000, weeks: 604_800_000 };
+                                          let emailPreview = "";
+                                          try {
+                                            if (editEmailTimingMode === "at_event") {
+                                              if (editTimingMode === "at_event") emailPreview = new Date(editBaseDate).toLocaleString();
+                                              else if (editTimingMode === "before_event") emailPreview = new Date(new Date(editBaseDate).getTime() - editBeforeAmount * ms[editBeforeUnit]).toLocaleString();
+                                              else if (editCustomDate) emailPreview = new Date(editCustomDate).toLocaleString();
+                                            } else if (editEmailTimingMode === "before_event") {
+                                              emailPreview = new Date(new Date(editBaseDate).getTime() - editEmailBeforeAmount * ms[editEmailBeforeUnit]).toLocaleString();
+                                            } else if (editEmailTimingMode === "custom" && editCustomEmailDate) {
+                                              emailPreview = new Date(editCustomEmailDate).toLocaleString();
+                                            }
+                                          } catch { /* invalid date */ }
+                                          return emailPreview ? (
+                                            <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                              Email sends: {emailPreview}
+                                            </p>
+                                          ) : null;
+                                        })()}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-400 flex items-center gap-1">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                    Email reminders available on <a href="/subscribe" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Pro &amp; Premium</a>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Save / Cancel */}
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={() => handleSaveEditReminder(followUp.id)}
+                              disabled={reminderSaving || !editBaseDate}
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-medium rounded-lg transition"
+                            >
+                              {reminderSaving ? "Saving..." : "Save Changes"}
+                            </button>
+                            <button
+                              onClick={() => { setEditingReminderId(null); setEditReminderData({}); }}
+                              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-lg transition"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Add Reminder Form */}
+                      {addingReminderToFollowUpId === followUp.id && (
+                        <div className="mt-3 pt-3 border-t border-slate-200 space-y-4">
+                          <p className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                            <svg className="w-4 h-4 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                            </svg>
+                            Add Reminder
+                          </p>
+
+                          {/* Title */}
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Title (optional)</label>
+                            <input
+                              type="text"
+                              value={newReminderTitle}
+                              onChange={(e) => setNewReminderTitle(e.target.value)}
+                              className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                              placeholder="Reminder title"
+                            />
+                          </div>
+
+                          {/* Scheduled / Base Date */}
+                          <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Scheduled Date</label>
+                            <input
+                              type="datetime-local"
+                              value={newReminderDate}
+                              onChange={(e) => setNewReminderDate(e.target.value)}
+                              className="w-full px-4 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                            />
+                          </div>
+
+                          {newReminderDate && (
+                            <div className="ml-1 space-y-4">
+                              {/* When to remind (in-app) */}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-2">When to remind</label>
+                                <div className="space-y-2">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`newRTiming_${followUp.id}`} value="at_event" checked={newTimingMode === "at_event"} onChange={() => setNewTimingMode("at_event")} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">At event time</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`newRTiming_${followUp.id}`} value="before_event" checked={newTimingMode === "before_event"} onChange={() => setNewTimingMode("before_event")} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">Before the event</span>
+                                  </label>
+                                  {newTimingMode === "before_event" && (
+                                    <div className="flex items-center gap-2 ml-6">
+                                      <input type="number" min={1} max={999} value={newBeforeAmount} onChange={(e) => setNewBeforeAmount(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                      <select value={newBeforeUnit} onChange={(e) => setNewBeforeUnit(e.target.value as ReminderBeforeUnit)} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                                        <option value="minutes">minute(s) before</option>
+                                        <option value="hours">hour(s) before</option>
+                                        <option value="days">day(s) before</option>
+                                        <option value="weeks">week(s) before</option>
+                                      </select>
+                                    </div>
+                                  )}
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`newRTiming_${followUp.id}`} value="custom" checked={newTimingMode === "custom"} onChange={() => setNewTimingMode("custom")} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">Custom date &amp; time</span>
+                                  </label>
+                                  {newTimingMode === "custom" && (
+                                    <div className="ml-6">
+                                      <input type="datetime-local" value={newCustomDate} onChange={(e) => setNewCustomDate(e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                    </div>
+                                  )}
+                                </div>
+
+                                {/* Computed preview */}
+                                {(() => {
+                                  const ms: Record<string, number> = { minutes: 60_000, hours: 3_600_000, days: 86_400_000, weeks: 604_800_000 };
+                                  let preview = "";
+                                  try {
+                                    if (newTimingMode === "at_event") preview = new Date(newReminderDate).toLocaleString();
+                                    else if (newTimingMode === "before_event") preview = new Date(new Date(newReminderDate).getTime() - newBeforeAmount * ms[newBeforeUnit]).toLocaleString();
+                                    else if (newTimingMode === "custom" && newCustomDate) preview = new Date(newCustomDate).toLocaleString();
+                                  } catch { /* invalid date */ }
+                                  return preview ? (
+                                    <p className="text-xs text-blue-600 mt-1.5 flex items-center gap-1">
+                                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                      Reminder fires: {preview}
+                                    </p>
+                                  ) : null;
+                                })()}
+                              </div>
+
+                              {/* Frequency */}
+                              <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Frequency</label>
+                                <div className="flex gap-4">
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`newRType_${followUp.id}`} value="once" checked={newReminderType === "once"} onChange={() => setNewReminderType("once")} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">Once</span>
+                                  </label>
+                                  <label className="flex items-center gap-2 cursor-pointer">
+                                    <input type="radio" name={`newRType_${followUp.id}`} value="recurring" checked={newReminderType === "recurring"} onChange={() => setNewReminderType("recurring")} className="text-blue-600 focus:ring-blue-500" />
+                                    <span className="text-sm text-slate-700">Recurring</span>
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Recurrence Interval */}
+                              {newReminderType === "recurring" && (
+                                <div>
+                                  <label className="block text-sm font-medium text-slate-700 mb-1">Repeat Every</label>
+                                  <select
+                                    value={newRecurrenceInterval}
+                                    onChange={(e) => setNewRecurrenceInterval(e.target.value as RecurrenceInterval)}
+                                    className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+                                  >
+                                    <option value="daily">Daily</option>
+                                    <option value="every_2_days">Every 2 Days</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="biweekly">Biweekly</option>
+                                    <option value="monthly">Monthly</option>
+                                  </select>
+                                </div>
+                              )}
+
+                              {/* Recurrence End Condition */}
+                              {newReminderType === "recurring" && (
+                                <div>
+                                  <label className="block text-sm font-medium text-slate-700 mb-1">Ends</label>
+                                  <div className="space-y-2">
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name={`newREnd_${followUp.id}`} value="never" checked={newRecurrenceEndMode === "never"} onChange={() => setNewRecurrenceEndMode("never")} className="text-blue-600 focus:ring-blue-500" />
+                                      <span className="text-sm text-slate-700">Never</span>
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name={`newREnd_${followUp.id}`} value="count" checked={newRecurrenceEndMode === "count"} onChange={() => setNewRecurrenceEndMode("count")} className="text-blue-600 focus:ring-blue-500" />
+                                      <span className="text-sm text-slate-700">After</span>
+                                      {newRecurrenceEndMode === "count" && (
+                                        <span className="flex items-center gap-1">
+                                          <input type="number" min={1} max={100} value={newRecurrenceCount} onChange={(e) => setNewRecurrenceCount(Math.max(1, parseInt(e.target.value) || 1))} className="w-16 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                          <span className="text-sm text-slate-600">times</span>
+                                        </span>
+                                      )}
+                                    </label>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                      <input type="radio" name={`newREnd_${followUp.id}`} value="date" checked={newRecurrenceEndMode === "date"} onChange={() => setNewRecurrenceEndMode("date")} className="text-blue-600 focus:ring-blue-500" />
+                                      <span className="text-sm text-slate-700">On date</span>
+                                    </label>
+                                    {newRecurrenceEndMode === "date" && (
+                                      <input type="date" value={newRecurrenceEndDate} onChange={(e) => setNewRecurrenceEndDate(e.target.value)} className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-sm ml-6" min={new Date().toISOString().split("T")[0]} />
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Email Reminder */}
+                              <div className="border-t border-slate-200 pt-3">
+                                {emailQuota && emailQuota.email_reminder_limit > 0 ? (
+                                  <div className="space-y-3">
+                                    <label className="flex items-center gap-3 cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={newEmailEnabled}
+                                        onChange={(e) => {
+                                          if (e.target.checked && emailQuota && !emailQuota.can_create_email_reminder) {
+                                            setLocalError(`You've reached your limit of ${emailQuota.email_reminder_limit} active email reminders.`);
+                                            return;
+                                          }
+                                          setNewEmailEnabled(e.target.checked);
+                                        }}
+                                        className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                      />
+                                      <div className="flex items-center gap-2">
+                                        <svg className="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                        </svg>
+                                        <span className="text-sm font-semibold text-slate-900">Also send email reminder</span>
+                                      </div>
+                                    </label>
+                                    <p className="text-xs text-slate-500 ml-7">
+                                      {emailQuota.email_reminders_used}/{emailQuota.email_reminder_limit} email reminders used
+                                      {emailQuota.email_reminders_remaining > 0 && (
+                                        <span className="text-green-600 ml-1">({emailQuota.email_reminders_remaining} remaining)</span>
+                                      )}
+                                    </p>
+
+                                    {newEmailEnabled && (
+                                      <div className="ml-7 space-y-2 bg-blue-50/50 border border-blue-100 rounded-lg p-3">
+                                        <label className="block text-sm font-medium text-slate-700 mb-1">When to send email</label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input type="radio" name={`newEmailTiming_${followUp.id}`} value="at_event" checked={newEmailTimingMode === "at_event"} onChange={() => setNewEmailTimingMode("at_event")} className="text-blue-600 focus:ring-blue-500" />
+                                          <span className="text-sm text-slate-700">Same as in-app reminder</span>
+                                        </label>
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input type="radio" name={`newEmailTiming_${followUp.id}`} value="before_event" checked={newEmailTimingMode === "before_event"} onChange={() => setNewEmailTimingMode("before_event")} className="text-blue-600 focus:ring-blue-500" />
+                                          <span className="text-sm text-slate-700">Before the event</span>
+                                        </label>
+                                        {newEmailTimingMode === "before_event" && (
+                                          <div className="flex items-center gap-2 ml-6">
+                                            <input type="number" min={1} max={999} value={newEmailBeforeAmount} onChange={(e) => setNewEmailBeforeAmount(Math.max(1, parseInt(e.target.value) || 1))} className="w-20 px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                            <select value={newEmailBeforeUnit} onChange={(e) => setNewEmailBeforeUnit(e.target.value as ReminderBeforeUnit)} className="px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                                              <option value="minutes">minute(s) before</option>
+                                              <option value="hours">hour(s) before</option>
+                                              <option value="days">day(s) before</option>
+                                              <option value="weeks">week(s) before</option>
+                                            </select>
+                                          </div>
+                                        )}
+                                        <label className="flex items-center gap-2 cursor-pointer">
+                                          <input type="radio" name={`newEmailTiming_${followUp.id}`} value="custom" checked={newEmailTimingMode === "custom"} onChange={() => setNewEmailTimingMode("custom")} className="text-blue-600 focus:ring-blue-500" />
+                                          <span className="text-sm text-slate-700">Custom date &amp; time</span>
+                                        </label>
+                                        {newEmailTimingMode === "custom" && (
+                                          <div className="ml-6">
+                                            <input type="datetime-local" value={newCustomEmailDate} onChange={(e) => setNewCustomEmailDate(e.target.value)} className="w-full px-3 py-1.5 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none" />
+                                          </div>
+                                        )}
+
+                                        {/* Email send-time preview */}
+                                        {(() => {
+                                          const ms: Record<string, number> = { minutes: 60_000, hours: 3_600_000, days: 86_400_000, weeks: 604_800_000 };
+                                          let emailPreview = "";
+                                          try {
+                                            if (newEmailTimingMode === "at_event") {
+                                              if (newTimingMode === "at_event") emailPreview = new Date(newReminderDate).toLocaleString();
+                                              else if (newTimingMode === "before_event") emailPreview = new Date(new Date(newReminderDate).getTime() - newBeforeAmount * ms[newBeforeUnit]).toLocaleString();
+                                              else if (newCustomDate) emailPreview = new Date(newCustomDate).toLocaleString();
+                                            } else if (newEmailTimingMode === "before_event") {
+                                              emailPreview = new Date(new Date(newReminderDate).getTime() - newEmailBeforeAmount * ms[newEmailBeforeUnit]).toLocaleString();
+                                            } else if (newEmailTimingMode === "custom" && newCustomEmailDate) {
+                                              emailPreview = new Date(newCustomEmailDate).toLocaleString();
+                                            }
+                                          } catch { /* invalid date */ }
+                                          return emailPreview ? (
+                                            <p className="text-xs text-blue-600 mt-1 flex items-center gap-1">
+                                              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                                              Email sends: {emailPreview}
+                                            </p>
+                                          ) : null;
+                                        })()}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <p className="text-xs text-slate-400 flex items-center gap-1">
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                    Email reminders available on <a href="/subscribe" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">Pro &amp; Premium</a>
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Add / Cancel */}
+                          <div className="flex gap-2 pt-2">
+                            <button
+                              onClick={() => handleAddReminderToFollowUp(followUp.id)}
+                              disabled={reminderSaving || !newReminderDate}
+                              className="px-4 py-2 bg-green-600 hover:bg-green-700 disabled:bg-green-400 text-white text-sm font-medium rounded-lg transition"
+                            >
+                              {reminderSaving ? "Adding..." : "Add Reminder"}
+                            </button>
+                            <button
+                              onClick={() => resetNewReminderState()}
+                              className="px-4 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-lg transition"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Add Reminder Button */}
+                      {followUp.reminders.length < 5 && isPaidPlan && addingReminderToFollowUpId !== followUp.id && (
+                        <div className={followUp.reminders.length > 0 ? "mt-2" : "mt-3 pt-3 border-t border-slate-200"}>
+                          <button
+                            onClick={() => setAddingReminderToFollowUpId(followUp.id)}
+                            className="inline-flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-700 font-medium transition"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                            </svg>
+                            Add Reminder ({followUp.reminders.length}/5)
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -1066,6 +1890,25 @@ function ApplicationDetailContent() {
                 >
                   Add Follow-up
                 </button>
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => { setEmailModalMode("apply"); setShowEmailModal(true); }}
+                    className="w-full px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 font-semibold rounded-lg transition"
+                  >
+                    Apply for this Job
+                  </button>
+                  {application.applied_date ? (
+                    <span className="mt-1 text-xs text-green-700">Applied on {new Date(application.applied_date).toLocaleDateString()}</span>
+                  ) : (
+                    <span className="mt-1 text-xs text-slate-500">Not yet applied</span>
+                  )}
+                </div>
+                <button
+                  onClick={() => { setEmailModalMode("forward"); setShowEmailModal(true); }}
+                  className="w-full px-4 py-2 bg-purple-100 hover:bg-purple-200 text-purple-700 font-semibold rounded-lg transition"
+                >
+                  Forward Job to a Friend
+                </button>
                 {application.applied_resume_text ? (
                   <button
                     onClick={() => {
@@ -1097,6 +1940,21 @@ function ApplicationDetailContent() {
             </div>
           </div>
         </div>
+
+        <ApplicationEmailModal
+          applicationId={applicationId}
+          isOpen={showEmailModal}
+          onClose={() => setShowEmailModal(false)}
+          mode={emailModalMode}
+          userName={user?.full_name || ""}
+          onSent={(appliedAt) => {
+            if (emailModalMode === "apply") {
+              setApplication((prev) =>
+                prev ? { ...prev, status: "applied" as JobApplicationStatus, applied_date: appliedAt } : prev
+              );
+            }
+          }}
+        />
       </div>
     </div>
   );
