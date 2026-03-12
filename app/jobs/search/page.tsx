@@ -146,7 +146,7 @@ export default function JobSearchPage() {
   };
 
   // ── Rerun a saved search ───────────────────────────────────────────────
-  const rerunSaved = (s: SavedJobSearch) => {
+  const rerunSaved = async (s: SavedJobSearch) => {
     setQuery(s.query);
     setLocation(s.location || "");
     setDatePosted(s.date_posted || "all");
@@ -154,10 +154,35 @@ export default function JobSearchPage() {
     setRemoteOnly(s.remote_only);
     setPage(1);
     setShowSaved(false);
-    // Let state settle, then search
-    setTimeout(() => {
-      handleSearch(undefined, 1);
-    }, 50);
+    setError(null);
+    setSuccessMsg(null);
+    setIsSearching(true);
+    setExpandedId(null);
+
+    try {
+      const resp: JobSearchResponse = await apiClient.searchJobs({
+        query: s.query.trim(),
+        location: s.location?.trim() || undefined,
+        page: 1,
+        date_posted: s.date_posted && s.date_posted !== "all" ? s.date_posted : undefined,
+        employment_type: s.employment_type || undefined,
+        remote_only: s.remote_only,
+      });
+      setResults(resp.results);
+      setTotalResults(resp.total_results);
+      setCreditsRemaining(resp.credits_remaining);
+      setCached(resp.cached);
+      if (resp.results.length === 0) {
+        setError("No results found. Try broadening your search.");
+      }
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error ? err.message : "Search failed. Please try again.";
+      setError(message);
+      setResults([]);
+    } finally {
+      setIsSearching(false);
+    }
   };
 
   // ── Delete saved search ────────────────────────────────────────────────
@@ -272,10 +297,7 @@ export default function JobSearchPage() {
                   onClick={() => rerunSaved(s)}
                   className="text-left flex-1 text-sm text-blue-600 dark:text-blue-400 hover:underline"
                 >
-                  <span className="font-medium">{s.query}</span>
-                  {s.location && (
-                    <span className="text-gray-500 dark:text-gray-400"> in {s.location}</span>
-                  )}
+                  <span className="font-medium">{s.name}</span>
                   {s.results_count !== null && s.results_count !== undefined && (
                     <span className="text-gray-400 ml-2">({s.results_count} results)</span>
                   )}

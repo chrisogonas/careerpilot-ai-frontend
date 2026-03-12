@@ -1557,6 +1557,7 @@ export interface JobSearchResponse {
 }
 
 export interface SaveJobSearchRequest {
+  name?: string;
   query: string;
   location?: string;
   date_posted?: string;
@@ -1567,6 +1568,7 @@ export interface SaveJobSearchRequest {
 
 export interface SavedJobSearch {
   id: string;
+  name: string;
   query: string;
   location?: string;
   date_posted?: string;
