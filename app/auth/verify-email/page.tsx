@@ -28,12 +28,12 @@ function VerifyEmailContent() {
         // Verify the email with the token
         await verifyEmail(token);
         setVerificationStatus("success");
-        setMessage("Email verified successfully! Redirecting to dashboard...");
+        setMessage("Your email has been verified successfully! You can now log in.");
 
-        // Redirect to dashboard after 2 seconds
+        // Redirect to login after 3 seconds
         setTimeout(() => {
-          router.push("/dashboard");
-        }, 2000);
+          router.push("/auth/login?verified=true");
+        }, 3000);
       } catch (err) {
         setVerificationStatus("error");
         const errorMessage = err instanceof Error ? err.message : "Email verification failed";
@@ -80,10 +80,10 @@ function VerifyEmailContent() {
               <h2 className="text-xl font-semibold text-green-600">Verification Successful!</h2>
               <p className="text-gray-600">{message}</p>
               <Link
-                href="/dashboard"
+                href="/auth/login"
                 className="inline-block mt-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
-                Go to Dashboard
+                Go to Login
               </Link>
             </div>
           )}

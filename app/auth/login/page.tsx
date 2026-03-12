@@ -10,14 +10,17 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [emailNotVerified, setEmailNotVerified] = useState(false);
   const { login, requiresTwoFA } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const inactivityLogout = searchParams.get("reason") === "inactivity";
+  const emailVerified = searchParams.get("verified") === "true";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setEmailNotVerified(false);
     setLoading(true);
 
     try {
@@ -29,9 +32,11 @@ function LoginForm() {
         router.push("/dashboard");
       }
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Login failed. Please try again."
-      );
+      const message = err instanceof Error ? err.message : "Login failed. Please try again.";
+      setError(message);
+      if (message.toLowerCase().includes("email not verified")) {
+        setEmailNotVerified(true);
+      }
     } finally {
       setLoading(false);
     }
@@ -53,9 +58,22 @@ function LoginForm() {
               You were logged out due to 30 minutes of inactivity. Please sign in again.
             </div>
           )}
+          {emailVerified && (
+            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
+              Email verified successfully! You can now sign in.
+            </div>
+          )}
           {error && (
             <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
+              <p>{error}</p>
+              {emailNotVerified && (
+                <Link
+                  href="/auth/resend-verification"
+                  className="inline-block mt-2 text-sm text-blue-600 hover:text-blue-700 font-medium underline"
+                >
+                  Resend verification email
+                </Link>
+              )}
             </div>
           )}
 
