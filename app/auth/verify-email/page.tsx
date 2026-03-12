@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/context/AuthContext";
 import Link from "next/link";
@@ -13,8 +13,12 @@ function VerifyEmailContent() {
   const { verifyEmail, isLoading, error } = useAuth();
   const [verificationStatus, setVerificationStatus] = useState<"loading" | "success" | "error">("loading");
   const [message, setMessage] = useState("");
+  const hasVerified = useRef(false);
 
   useEffect(() => {
+    if (hasVerified.current) return;
+    hasVerified.current = true;
+
     const verifyEmailToken = async () => {
       try {
         const token = searchParams.get("token");
@@ -42,7 +46,8 @@ function VerifyEmailContent() {
     };
 
     verifyEmailToken();
-  }, [searchParams, verifyEmail, router]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams]);
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
