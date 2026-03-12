@@ -9,6 +9,7 @@ import { Reminder, TodoReminder, SnoozeDuration } from '@/lib/types';
 const POLL_INTERVAL = 60_000; // 60 seconds
 const CYCLE_INTERVAL = 6_000; // 6 seconds per reminder
 const AUTO_DISMISS_MS = 60_000; // Auto-park to notification tray after 60s
+const CHIME_COOLDOWN = 10_000; // Min ms between chimes to avoid rapid-fire beeping
 
 // ---------------------------------------------------------------------------
 // Soft chime via Web Audio API (no external file needed)
@@ -85,6 +86,17 @@ export default function ReminderBanner() {
   const parkedRemindersRef = useRef(parkedReminders);
   parkedRemindersRef.current = parkedReminders;
 
+  // Stabilise function refs so fetchReminders doesn't change identity every render
+  const getDueRemindersRef = useRef(getDueReminders);
+  getDueRemindersRef.current = getDueReminders;
+  const getDueTodoRemindersRef = useRef(getDueTodoReminders);
+  getDueTodoRemindersRef.current = getDueTodoReminders;
+
+  // Chime cooldown — prevents rapid-fire beeping from concurrent fetches
+  const lastChimeRef = useRef(0);
+  // Fetch guard — prevents overlapping in-flight fetches
+  const fetchingRef = useRef(false);
+
   const isPaidPlan = subscription && currentPlan && currentPlan.name !== 'free' && ['active', 'trialing'].includes(subscription.status);
 
   // Convert raw Reminder to unified
@@ -119,13 +131,15 @@ export default function ReminderBanner() {
 
   const fetchReminders = useCallback(async () => {
     if (!isAuthenticated) return;
+    if (fetchingRef.current) return; // prevent concurrent fetches
+    fetchingRef.current = true;
     try {
       // TODO reminders are available to ALL plans; follow-up reminders are paid-only
       const [fuData, tdData] = await Promise.all([
         isPaidPlan
-          ? getDueReminders().catch(() => ({ due_reminders: [] }))
+          ? getDueRemindersRef.current().catch(() => ({ due_reminders: [] }))
           : Promise.resolve({ due_reminders: [] as Reminder[] }),
-        getDueTodoReminders().catch(() => ({ due_reminders: [] })),
+        getDueTodoRemindersRef.current().catch(() => ({ due_reminders: [] })),
       ]);
 
       const fuItems: UnifiedReminder[] = (fuData.due_reminders || []).map(toUnifiedFollowUp);
@@ -152,17 +166,21 @@ export default function ReminderBanner() {
 
       setReminders(incoming);
 
-      // Play chime only when genuinely new reminders appear
+      // Play chime only when genuinely new reminders appear (with cooldown)
       const prevIds = prevReminderIdsRef.current;
       const hasNew = incoming.some((r) => !prevIds.has(r.id));
-      if (hasNew && incoming.length > 0) {
+      const now2 = Date.now();
+      if (hasNew && incoming.length > 0 && now2 - lastChimeRef.current >= CHIME_COOLDOWN) {
         playChime();
+        lastChimeRef.current = now2;
       }
       prevReminderIdsRef.current = new Set(incoming.map((r) => r.id));
     } catch {
       // Silently fail
+    } finally {
+      fetchingRef.current = false;
     }
-  }, [isAuthenticated, isPaidPlan, getDueReminders, getDueTodoReminders]);
+  }, [isAuthenticated, isPaidPlan]);
 
   // Initial fetch + polling
   useEffect(() => {
