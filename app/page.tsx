@@ -86,38 +86,56 @@ export default function Home() {
         </div>
 
         {/* Features */}
-        <div className="mt-28 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="mt-28 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <FeatureCard
             icon="🔍"
             title="Job Board Search"
-            description="Search Indeed, LinkedIn, Glassdoor & more from one place. Save searches and add jobs straight to your tracker."
+            description="Search Indeed, LinkedIn, Glassdoor & more from one place. Save searches and import jobs to your tracker."
             badge="New"
+            href="/features/job-board-search"
           />
           <FeatureCard
             icon="📄"
             title="AI Resume Tailoring"
-            description="Paste a job description and get your resume rewritten with the right keywords, skills & ATS-friendly formatting."
+            description="Get your resume rewritten with the right keywords, skills & ATS-friendly formatting for each job."
+            href="/features/resume-tailoring"
           />
           <FeatureCard
             icon="✍️"
             title="Cover Letter Generator"
             description="Personalized cover letters crafted for each company and role — matching your tone and experience."
+            href="/features/cover-letter"
           />
           <FeatureCard
             icon="🎙️"
             title="AI Mock Interviews"
-            description="Practice with an AI interviewer via text or voice. Get real-time feedback, scores & detailed improvement tips."
+            description="Practice with an AI interviewer via text or voice. Get real-time feedback, scores & improvement tips."
             badge="New"
+            href="/features/mock-interviews"
           />
           <FeatureCard
             icon="⭐"
             title="STAR Story Builder"
             description="Generate polished behavioral interview stories from your experience using the STAR method."
+            href="/features/star-stories"
           />
           <FeatureCard
             icon="📋"
             title="Application Tracker"
-            description="Track every job application in one dashboard — status, notes, deadlines & quick access to tailor or prep."
+            description="Track every job application — status, notes, deadlines & quick access to tailor or prep."
+            href="/features/application-tracker"
+          />
+          <FeatureCard
+            icon="📊"
+            title="Analytics Dashboard"
+            description="Visualize your job search progress with application trends, credit usage & feature insights."
+            href="/features/analytics"
+          />
+          <FeatureCard
+            icon="🔔"
+            title="Smart Reminders"
+            description="Set follow-up and todo reminders with snooze, recurring schedules & optional email alerts."
+            href="/features/smart-reminders"
           />
         </div>
       </div>
@@ -350,23 +368,31 @@ function FeatureCard({
   title,
   description,
   badge,
+  href,
 }: {
   icon: string;
   title: string;
   description: string;
   badge?: string;
+  href: string;
 }) {
   return (
-    <div className="relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition">
+    <Link
+      href={href}
+      className="group relative bg-white rounded-lg shadow-md p-6 hover:shadow-lg hover:border-blue-200 border border-transparent transition"
+    >
       {badge && (
         <span className="absolute -top-2.5 right-4 bg-emerald-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full">
           {badge}
         </span>
       )}
       <div className="text-4xl mb-4">{icon}</div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
-    </div>
+      <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">{title}</h3>
+      <p className="text-gray-600 text-sm mb-3">{description}</p>
+      <span className="inline-flex items-center text-blue-600 text-sm font-semibold group-hover:translate-x-1 transition">
+        Learn more →
+      </span>
+    </Link>
   );
 }
 
