@@ -237,14 +237,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const resendVerificationEmail = async () => {
+  const resendVerificationEmail = async (email?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      if (!tempVerificationEmail) {
+      const emailToUse = email || tempVerificationEmail;
+      if (!emailToUse) {
         throw new Error("No email address available for verification");
       }
-      await apiClient.resendVerificationEmail();
+      await apiClient.resendVerificationEmail({ email: emailToUse });
       // Verification email sent successfully
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to resend verification email";

@@ -424,10 +424,11 @@ class ApiClient {
     return this.handleResponse<VerifyEmailResponse>(response);
   }
 
-  async resendVerificationEmail(): Promise<ResendVerificationEmailResponse> {
+  async resendVerificationEmail(payload: { email: string }): Promise<ResendVerificationEmailResponse> {
     const response = await fetch(`${this.baseURL}/auth/resend-verification-email`, {
       method: "POST",
       headers: this.getHeaders(),
+      body: JSON.stringify(payload),
     });
 
     return this.handleResponse<ResendVerificationEmailResponse>(response);

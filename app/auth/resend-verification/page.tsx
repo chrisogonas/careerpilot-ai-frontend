@@ -23,7 +23,7 @@ export default function ResendVerificationPage() {
     }
 
     try {
-      await resendVerificationEmail();
+      await resendVerificationEmail(email);
       setSent(true);
       setEmail("");
       // Auto-dismiss success message after 5 seconds

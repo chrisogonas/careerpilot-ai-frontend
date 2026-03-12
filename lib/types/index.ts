@@ -1726,7 +1726,7 @@ export interface AuthContextType {
   verifyTwoFA: (code: string) => Promise<void>;
   sendVerificationEmail: (email: string) => Promise<void>;
   verifyEmail: (token: string) => Promise<void>;
-  resendVerificationEmail: () => Promise<void>;
+  resendVerificationEmail: (email: string) => Promise<void>;
   requestPasswordReset: (email: string) => Promise<void>;
   resetPassword: (token: string, newPassword: string) => Promise<void>;
   getSubscription: () => Promise<void>;
