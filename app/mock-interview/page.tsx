@@ -97,6 +97,10 @@ function MockInterviewContent() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const recognitionRef = useRef<any>(null);
 
+  // ── State: Voice selection
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceURI, setSelectedVoiceURI] = useState("");
+
   // ── State: Global
   const [error, setError] = useState("");
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -151,6 +155,36 @@ function MockInterviewContent() {
     if (url) setJobUrl(url);
   }, [searchParams]);
 
+  // ── Load available voices ────────────────────────────────────────────────
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+    const loadVoices = () => {
+      const voices = window.speechSynthesis.getVoices();
+      if (voices.length === 0) return;
+      // Prefer English voices, sort by name
+      const english = voices.filter(v => v.lang.startsWith("en"));
+      setAvailableVoices(english.length > 0 ? english : voices);
+      // Default to first natural-sounding voice if none selected
+      if (!selectedVoiceURI) {
+        const preferred = english.find(v =>
+          /zira|jenny|aria|emma|guy|davis|mark|david/i.test(v.name)
+        );
+        setSelectedVoiceURI((preferred || english[0] || voices[0]).voiceURI);
+      }
+    };
+    loadVoices();
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    return () => { window.speechSynthesis.onvoiceschanged = null; };
+  }, [selectedVoiceURI]);
+
+  // Helper to classify voice gender from name heuristics
+  const classifyVoice = (v: SpeechSynthesisVoice): "female" | "male" | "other" => {
+    const name = v.name.toLowerCase();
+    if (/zira|jenny|aria|emma|hazel|susan|linda|clara|elsa|hera|libby|maisie|neerja|sonia|catherine|natasha|flo|sara|heami|female/i.test(name)) return "female";
+    if (/mark|david|guy|davis|roger|james|ryan|liam|ravi|thomas|william|andrew|christopher|brian|sean|steffan|male/i.test(name)) return "male";
+    return "other";
+  };
+
   // ── Ref to always track latest currentAnswer for speech recognition ────
   const currentAnswerRef = useRef(currentAnswer);
   useEffect(() => { currentAnswerRef.current = currentAnswer; }, [currentAnswer]);
@@ -161,13 +195,18 @@ function MockInterviewContent() {
     if (!("speechSynthesis" in window)) return;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
+    // Apply selected voice
+    if (selectedVoiceURI) {
+      const voice = window.speechSynthesis.getVoices().find(v => v.voiceURI === selectedVoiceURI);
+      if (voice) utterance.voice = voice;
+    }
     utterance.rate = 0.95;
     utterance.pitch = 1;
     utterance.onstart = () => setIsSpeaking(true);
     utterance.onend = () => setIsSpeaking(false);
     utterance.onerror = () => setIsSpeaking(false);
     window.speechSynthesis.speak(utterance);
-  }, []);
+  }, [selectedVoiceURI]);
 
   const startListening = useCallback(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -1071,6 +1110,101 @@ function MockInterviewContent() {
                   </p>
                 </button>
               </div>
+
+              {/* Voice Picker — shown when Audio mode selected */}
+              {interviewMode === "audio" && availableVoices.length > 0 && (() => {
+                const female = availableVoices.filter(v => classifyVoice(v) === "female");
+                const male = availableVoices.filter(v => classifyVoice(v) === "male");
+                const other = availableVoices.filter(v => classifyVoice(v) === "other");
+                return (
+                  <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <label className="block text-sm font-medium text-gray-700 mb-3">
+                      🔊 Interviewer Voice
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      {female.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Female Voices</p>
+                          <div className="space-y-1.5">
+                            {female.map(v => (
+                              <button
+                                key={v.voiceURI}
+                                type="button"
+                                onClick={() => setSelectedVoiceURI(v.voiceURI)}
+                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition flex items-center justify-between ${
+                                  selectedVoiceURI === v.voiceURI
+                                    ? "bg-blue-600 text-white shadow-sm"
+                                    : "bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                                }`}
+                              >
+                                <span className="truncate">{v.name.replace(/Microsoft |Google |Online \(Natural\)|\s*-\s*English.*$/gi, "").trim()}</span>
+                                <span
+                                  className={`ml-2 text-xs cursor-pointer ${selectedVoiceURI === v.voiceURI ? "text-blue-200 hover:text-white" : "text-blue-500 hover:text-blue-700"}`}
+                                  onClick={(e) => { e.stopPropagation(); const u = new SpeechSynthesisUtterance("Hello, I'll be your interviewer today. Let's get started."); u.voice = v; u.rate = 0.95; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }}
+                                  title="Preview this voice"
+                                >▶ preview</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {male.length > 0 && (
+                        <div>
+                          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">Male Voices</p>
+                          <div className="space-y-1.5">
+                            {male.map(v => (
+                              <button
+                                key={v.voiceURI}
+                                type="button"
+                                onClick={() => setSelectedVoiceURI(v.voiceURI)}
+                                className={`w-full text-left px-3 py-2 rounded-md text-sm transition flex items-center justify-between ${
+                                  selectedVoiceURI === v.voiceURI
+                                    ? "bg-blue-600 text-white shadow-sm"
+                                    : "bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                                }`}
+                              >
+                                <span className="truncate">{v.name.replace(/Microsoft |Google |Online \(Natural\)|\s*-\s*English.*$/gi, "").trim()}</span>
+                                <span
+                                  className={`ml-2 text-xs cursor-pointer ${selectedVoiceURI === v.voiceURI ? "text-blue-200 hover:text-white" : "text-blue-500 hover:text-blue-700"}`}
+                                  onClick={(e) => { e.stopPropagation(); const u = new SpeechSynthesisUtterance("Hello, I'll be your interviewer today. Let's get started."); u.voice = v; u.rate = 0.95; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }}
+                                  title="Preview this voice"
+                                >▶ preview</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {other.length > 0 && (
+                      <details className="mt-3">
+                        <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">Other voices ({other.length})</summary>
+                        <div className="mt-2 space-y-1.5">
+                          {other.map(v => (
+                            <button
+                              key={v.voiceURI}
+                              type="button"
+                              onClick={() => setSelectedVoiceURI(v.voiceURI)}
+                              className={`w-full text-left px-3 py-2 rounded-md text-sm transition flex items-center justify-between ${
+                                selectedVoiceURI === v.voiceURI
+                                  ? "bg-blue-600 text-white shadow-sm"
+                                  : "bg-white border border-gray-200 text-gray-700 hover:border-blue-300 hover:bg-blue-50"
+                              }`}
+                            >
+                              <span className="truncate">{v.name.replace(/Microsoft |Google |Online \(Natural\)|\s*-\s*English.*$/gi, "").trim()}</span>
+                              <span
+                                className={`ml-2 text-xs cursor-pointer ${selectedVoiceURI === v.voiceURI ? "text-blue-200 hover:text-white" : "text-blue-500 hover:text-blue-700"}`}
+                                onClick={(e) => { e.stopPropagation(); const u = new SpeechSynthesisUtterance("Hello, I'll be your interviewer today. Let's get started."); u.voice = v; u.rate = 0.95; window.speechSynthesis.cancel(); window.speechSynthesis.speak(u); }}
+                                title="Preview this voice"
+                              >▶ preview</span>
+                            </button>
+                          ))}
+                        </div>
+                      </details>
+                    )}
+                    <p className="text-xs text-gray-400 mt-3">Click "preview" to hear each voice before starting.</p>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* How it works */}
