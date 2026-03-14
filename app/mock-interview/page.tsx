@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
 import { Resume, InterviewAccessResponse, InterviewRespondResponse, InterviewFeedback, InterviewSessionSummary, InterviewSessionOut } from "@/lib/types";
+import EmptyState from "@/app/components/EmptyState";
+import { Mic } from "lucide-react";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -626,9 +628,13 @@ function MockInterviewContent() {
               <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mx-auto" />
             </div>
           ) : history.length === 0 ? (
-            <div className="bg-white rounded-lg shadow p-8 text-center">
-              <p className="text-gray-500 text-lg">No interviews yet. Start your first one!</p>
-            </div>
+            <EmptyState
+              icon={Mic}
+              title="No Interviews Yet"
+              subtitle="Start your first mock interview to practice and improve"
+              actionLabel="New Interview"
+              onAction={() => setView("setup")}
+            />
           ) : (
             <div className="space-y-3">
               {history.map((s) => (

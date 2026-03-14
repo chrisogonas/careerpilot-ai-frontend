@@ -1,11 +1,47 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type ElementType } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { useAuth } from '@/lib/context/AuthContext';
 import logoSrc from '@/app/assets/logo/career.pilot.ai.icon.png';
+import {
+  Home,
+  FileText,
+  Sparkles,
+  Briefcase,
+  Search,
+  Mic,
+  ClipboardList,
+  BarChart3,
+  User,
+  Shield,
+  CreditCard,
+  Receipt,
+  Mail,
+  DollarSign,
+  KeyRound,
+  Zap,
+  Users,
+  Ruler,
+  Gem,
+  TrendingUp,
+  Bot,
+  Flag,
+  Ticket,
+  ScrollText,
+  Radio,
+  AtSign,
+  Link2,
+  Bell,
+  LogOut,
+  PenLine,
+  Star,
+  Rocket,
+  Gift,
+  Layout,
+} from 'lucide-react';
 
 // ────────────────────────────────────────────────────────────────────────────
 // Navigation items organised into groups
@@ -14,7 +50,7 @@ import logoSrc from '@/app/assets/logo/career.pilot.ai.icon.png';
 interface NavItem {
   label: string;
   href: string;
-  icon: string;
+  icon: ElementType;
   authOnly?: boolean;
   guestOnly?: boolean;
 }
@@ -26,62 +62,83 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    title: 'Main',
+    title: 'Dashboard',
     items: [
-      { label: 'Dashboard', href: '/dashboard', icon: '🏠', authOnly: true },
-      { label: 'My Resumes', href: '/resumes', icon: '📄', authOnly: true },
-      { label: 'Tailor Resume', href: '/tailor', icon: '✂️', authOnly: true },
-      { label: 'Applications', href: '/applications', icon: '💼', authOnly: true },
-      { label: 'Job Search', href: '/jobs/search', icon: '🔍', authOnly: true },
-      { label: 'Mock Interview', href: '/mock-interview', icon: '🎤', authOnly: true },
-      { label: 'My TODOs', href: '/todos', icon: '📋', authOnly: true },
+      { label: 'Dashboard', href: '/dashboard', icon: Home, authOnly: true },
+    ],
+  },
+  {
+    title: 'Job Tools',
+    items: [
+      { label: 'Job Search', href: '/jobs/search', icon: Search, authOnly: true },
+      { label: 'Analyze Job', href: '/analyze-job', icon: Briefcase, authOnly: true },
+      { label: 'Tailor Resume', href: '/tailor', icon: Sparkles, authOnly: true },
+      { label: 'Create Cover Letter', href: '/cover-letter', icon: PenLine, authOnly: true },
+      { label: 'STAR Stories', href: '/star-stories', icon: Star, authOnly: true },
+      { label: 'Apply Wizard', href: '/apply', icon: Rocket, authOnly: true },
+    ],
+  },
+  {
+    title: 'Preparation',
+    items: [
+      { label: 'Mock Interview', href: '/mock-interview', icon: Mic, authOnly: true },
+      { label: 'My Resumes', href: '/resumes', icon: FileText, authOnly: true },
+      { label: 'Resume Templates', href: '/resumes/templates', icon: Layout, authOnly: true },
+    ],
+  },
+  {
+    title: 'Tracking',
+    items: [
+      { label: 'Applications', href: '/applications', icon: Briefcase, authOnly: true },
+      { label: 'My TODOs', href: '/todos', icon: ClipboardList, authOnly: true },
     ],
   },
   {
     title: 'Insights',
     items: [
-      { label: 'Analytics', href: '/analytics', icon: '📊', authOnly: true },
+      { label: 'Analytics', href: '/analytics', icon: BarChart3, authOnly: true },
     ],
   },
   {
     title: 'Account',
     items: [
-      { label: 'Profile', href: '/profile', icon: '👤', authOnly: true },
-      { label: 'Security', href: '/profile/security', icon: '🔐', authOnly: true },
-      { label: 'Upgrade', href: '/subscribe', icon: '💳', authOnly: true },
-      { label: 'Billing', href: '/billing', icon: '🧾', authOnly: true },
+      { label: 'Profile', href: '/profile', icon: User, authOnly: true },
+      { label: 'Security', href: '/profile/security', icon: Shield, authOnly: true },
+      { label: 'Upgrade', href: '/subscribe', icon: CreditCard, authOnly: true },
+      { label: 'Billing', href: '/billing', icon: Receipt, authOnly: true },
+      { label: 'Referrals', href: '/referrals', icon: Gift, authOnly: true },
     ],
   },
   {
     title: 'Support',
     items: [
-      { label: 'Contact Us', href: '/contact', icon: '✉️' },
+      { label: 'Contact Us', href: '/contact', icon: Mail },
     ],
   },
 ];
 
 const GUEST_ITEMS: NavItem[] = [
-  { label: 'Home', href: '/', icon: '🏠', guestOnly: true },
-  { label: 'Pricing', href: '/pricing', icon: '💰', guestOnly: true },
-  { label: 'Contact Us', href: '/contact', icon: '✉️', guestOnly: true },
+  { label: 'Home', href: '/', icon: Home, guestOnly: true },
+  { label: 'Pricing', href: '/pricing', icon: DollarSign, guestOnly: true },
+  { label: 'Contact Us', href: '/contact', icon: Mail, guestOnly: true },
 ];
 
 const ADMIN_GROUP: NavGroup = {
   title: 'Admin',
   items: [
-    { label: 'Admin Dashboard', href: '/admin', icon: '⚡', authOnly: true },
-    { label: 'User Management', href: '/admin/users', icon: '👥', authOnly: true },
-    { label: 'Plan Config', href: '/admin/plans', icon: '📐', authOnly: true },
-    { label: 'Credit Packs', href: '/admin/credit-packs', icon: '💎', authOnly: true },
-    { label: 'Revenue', href: '/admin/revenue', icon: '📈', authOnly: true },
-    { label: 'AI Costs', href: '/admin/ai-costs', icon: '🤖', authOnly: true },
-    { label: 'Feature Flags', href: '/admin/features', icon: '🚩', authOnly: true },
-    { label: 'Support', href: '/admin/support', icon: '🎫', authOnly: true },
-    { label: 'Audit Log', href: '/admin/audit', icon: '📜', authOnly: true },
-    { label: 'Observability', href: '/admin/observability', icon: '📡', authOnly: true },
-    { label: 'Emails', href: '/admin/emails', icon: '📧', authOnly: true },
-    { label: 'Webhooks', href: '/admin/webhooks', icon: '🔗', authOnly: true },
-    { label: 'Alerts', href: '/admin/alerts', icon: '🔔', authOnly: true },
+    { label: 'Admin Dashboard', href: '/admin', icon: Zap, authOnly: true },
+    { label: 'User Management', href: '/admin/users', icon: Users, authOnly: true },
+    { label: 'Plan Config', href: '/admin/plans', icon: Ruler, authOnly: true },
+    { label: 'Credit Packs', href: '/admin/credit-packs', icon: Gem, authOnly: true },
+    { label: 'Revenue', href: '/admin/revenue', icon: TrendingUp, authOnly: true },
+    { label: 'AI Costs', href: '/admin/ai-costs', icon: Bot, authOnly: true },
+    { label: 'Feature Flags', href: '/admin/features', icon: Flag, authOnly: true },
+    { label: 'Support', href: '/admin/support', icon: Ticket, authOnly: true },
+    { label: 'Audit Log', href: '/admin/audit', icon: ScrollText, authOnly: true },
+    { label: 'Observability', href: '/admin/observability', icon: Radio, authOnly: true },
+    { label: 'Emails', href: '/admin/emails', icon: AtSign, authOnly: true },
+    { label: 'Webhooks', href: '/admin/webhooks', icon: Link2, authOnly: true },
+    { label: 'Alerts', href: '/admin/alerts', icon: Bell, authOnly: true },
   ],
 };
 
@@ -139,13 +196,19 @@ export default function Sidebar() {
   const isActive = (href: string) =>
     pathname === href || (href !== '/' && pathname.startsWith(href));
 
+  const isLandingPage = pathname === '/';
+
   return (
     <>
       {/* ──────── Top bar ──────── */}
-      <header className="fixed top-0 left-0 right-0 z-40 bg-white border-b border-slate-200 h-14 flex items-center px-4 shadow-sm">
+      <header className={`fixed top-0 left-0 right-0 h-14 flex items-center px-4 ${
+        isLandingPage
+          ? 'z-[60] bg-transparent pointer-events-none'
+          : 'z-40 bg-white border-b border-slate-200 shadow-sm'
+      }`}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="p-2 -ml-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition"
+          className="p-2 -ml-1 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-blue-600 transition lg:hidden pointer-events-auto"
           aria-label="Toggle sidebar"
         >
           {isOpen ? (
@@ -159,7 +222,7 @@ export default function Sidebar() {
           )}
         </button>
 
-        <Link href="/" className="ml-3 flex items-center gap-2 truncate">
+        <Link href="/" className="ml-3 lg:ml-1 flex items-center gap-2 truncate pointer-events-auto">
           <Image
             src={logoSrc}
             alt="CareerPilot AI logo"
@@ -173,7 +236,7 @@ export default function Sidebar() {
 
         {/* Right side — user info on desktop */}
         {isAuthenticated && user && (
-          <div className="ml-auto hidden sm:flex items-center gap-3">
+          <div className="ml-auto hidden sm:flex items-center gap-3 pointer-events-auto">
             <span className="text-sm text-gray-600 truncate max-w-[180px]">
               {user.full_name || user.email}
             </span>
@@ -186,7 +249,7 @@ export default function Sidebar() {
           </div>
         )}
         {!isAuthenticated && (
-          <div className="ml-auto">
+          <div className="ml-auto pointer-events-auto">
             <Link
               href="/auth/login"
               className="inline-flex items-center gap-1.5 px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 text-sm font-semibold tracking-wide shadow-sm hover:shadow-md transition-all duration-200"
@@ -200,7 +263,7 @@ export default function Sidebar() {
         )}
       </header>
 
-      {/* ──────── Overlay (mobile) ──────── */}
+      {/* ──────── Overlay (mobile only) ──────── */}
       {isOpen && (
         <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm lg:hidden" />
       )}
@@ -208,7 +271,7 @@ export default function Sidebar() {
       {/* ──────── Sidebar drawer ──────── */}
       <aside
         ref={sidebarRef}
-        className={`fixed top-14 left-0 z-50 h-[calc(100vh-3.5rem)] w-64 bg-white border-r border-slate-200 shadow-xl transform transition-transform duration-300 ease-in-out overflow-y-auto ${
+        className={`fixed top-14 left-0 z-50 h-[calc(100vh-3.5rem)] w-64 bg-white border-r border-slate-200 shadow-xl transform transition-transform duration-300 ease-in-out overflow-y-auto lg:translate-x-0 lg:shadow-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -252,7 +315,7 @@ export default function Sidebar() {
                               : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
                           }`}
                         >
-                          <span className="text-base w-5 text-center">{item.icon}</span>
+                          <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
                           {item.label}
                         </Link>
                       ))}
@@ -272,9 +335,10 @@ export default function Sidebar() {
                 </div>
                 <button
                   onClick={handleLogout}
-                  className="mt-3 w-full text-left px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
+                  className="mt-3 w-full flex items-center gap-3 text-left px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
                 >
-                  🚪 Logout
+                  <LogOut className="w-[18px] h-[18px] flex-shrink-0" />
+                  Logout
                 </button>
               </div>
             </>
@@ -290,7 +354,7 @@ export default function Sidebar() {
                       : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
                   }`}
                 >
-                  <span className="text-base w-5 text-center">{item.icon}</span>
+                  <item.icon className="w-[18px] h-[18px] flex-shrink-0" />
                   {item.label}
                 </Link>
               ))}
@@ -299,7 +363,7 @@ export default function Sidebar() {
                   href="/auth/login"
                   className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition text-gray-700 hover:bg-gray-100 hover:text-blue-600"
                 >
-                  <span className="text-base w-5 text-center">🔑</span>
+                  <KeyRound className="w-[18px] h-[18px] flex-shrink-0" />
                   Sign In
                 </Link>
               </div>

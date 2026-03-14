@@ -1,10 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { useAuth } from "@/lib/context/AuthContext";
 import { apiClient } from "@/lib/utils/api";
 import { Plan, CreditPack } from "@/lib/types";
+import type { ElementType } from "react";
+import FAQSection from "@/app/components/FAQ";
+import {
+  FileText,
+  Mic,
+  ClipboardList,
+  Sparkles,
+} from "lucide-react";
 
 function centsToUsd(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
@@ -34,13 +42,70 @@ export default function Home() {
     fetchData();
   }, []);
 
+  const faqItems = useMemo(() => [
+    {
+      question: "How does AI resume tailoring work?",
+      answer: "Our AI analyzes job descriptions and compares them with your resume. It identifies missing keywords, skills, and experience that match what recruiters are looking for, then rewrites your resume with ATS-friendly formatting and targeted bullet points.",
+    },
+    {
+      question: "How does the Job Board Search work?",
+      answer: "CareerPilot searches across Indeed, LinkedIn, Glassdoor and other major job boards simultaneously using the JSearch API. You can filter by date, employment type, remote status, and location. Save searches for later, save jobs to your application tracker, or jump straight into tailoring your resume for a specific listing.",
+    },
+    {
+      question: "What are AI Mock Interviews?",
+      answer: "Our AI interviewer conducts realistic mock interviews based on the job you're targeting. Choose text or voice mode — the AI asks tailored questions, evaluates your answers in real time, and provides a detailed scorecard with feedback on content, communication, and areas to improve.",
+    },
+    {
+      question: "Will my resume work with Applicant Tracking Systems (ATS)?",
+      answer: "Yes! Our resume optimization ensures your resume passes ATS filters. We analyze your resume against the job description to maximize match rate and ensure it's formatted correctly.",
+    },
+    {
+      question: "Can I customize the AI-generated content?",
+      answer: "Absolutely. All AI-generated content (resumes, cover letters, STAR stories) is fully editable. You can customize everything to match your voice and specific experience.",
+    },
+    {
+      question: "How do credits work?",
+      answer: "Credits are the currency for AI-powered features. Job analysis costs 1 credit, resume tailoring costs 5 credits, cover letter generation costs 2 credits, STAR story generation costs 3 credits, mock interviews cost 5 credits, and job searches cost 1 credit. Free plan users get 60 monthly credits; paid plans get their respective allotment plus any purchased credit packs.",
+    },
+    {
+      question: "What can I do on the Free plan?",
+      answer: "The Free plan includes 60 monthly credits, up to 3 resumes, resume tailoring, job analysis, STAR story generation, 5 free job searches, and the application tracker. It's perfect for testing the platform. Note: cover letter generation and AI mock interviews require a Pro or Premium subscription.",
+    },
+    {
+      question: "Which features require a paid subscription?",
+      answer: "Cover letter generation and AI mock interviews are exclusive to Pro and Premium subscribers. All other features — resume tailoring, job analysis, STAR story generation, job board search, and the application tracker — are available on every plan including Free, as long as you have credits.",
+    },
+    {
+      question: "What are credit packs?",
+      answer: `Credit packs are one-time purchases (${creditPacks.length ? creditPacks.map((p) => p.credits.toLocaleString()).join(", ").replace(/,([^,]*)$/, ", or$1") : "150, 400, or 700"} credits) that add credits to your account instantly. Purchased credits are valid for 60 days and work alongside any subscription plan. If you buy another pack before your credits expire, the expiry window is extended.`,
+    },
+    {
+      question: "Do you offer annual billing?",
+      answer: "Yes! Both Pro and Premium plans offer annual billing with a 20% discount. Pro annual is $7.99/month (billed $95.88/year) and Premium annual is $23.99/month (billed $287.88/year). You can switch between monthly and annual billing anytime.",
+    },
+    {
+      question: "Can I cancel or change my plan anytime?",
+      answer: "Absolutely. You can upgrade, downgrade, or cancel your plan at any time with no contracts or cancellation fees. Your access continues until the end of your current billing period.",
+    },
+    {
+      question: "Is my data secure?",
+      answer: "Yes. We use industry-standard encryption and security practices including two-factor authentication (2FA) to protect your resume and personal information. Your data is never shared with third parties.",
+    },
+  ], [creditPacks]);
+
+  const topFaqs = faqItems.slice(0, 5);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-100">
-      {/* Hero Section */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-20">
+      {/* ── Sticky Navigation ─────────────────────────────────────── */}
+      <StickyNav />
+
+      {/* ── Hero Section ──────────────────────────────────────────── */}
+      <div id="home" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 pb-20">
         <div className="text-center max-w-4xl mx-auto">
           <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-blue-100 text-blue-700 rounded-full text-sm font-medium mb-6">
-            ✨ AI-Powered Career Platform — from search to offer
+            <Sparkles className="w-4 h-4" />
+            AI-Powered Career Platform — from search to offer
           </div>
           <h1 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6">
             Your AI-Powered{" "}
@@ -79,69 +144,55 @@ export default function Home() {
             </Link>
           )}
 
-          {/* Trust bar */}
           <p className="mt-6 text-sm text-gray-400">
             No credit card required &bull; 60 free monthly credits &bull; Cancel anytime
           </p>
         </div>
+      </div>
 
-        {/* Features */}
-        <div className="mt-28 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <FeatureCard
-            icon="🔍"
-            title="Job Board Search"
-            description="Search Indeed, LinkedIn, Glassdoor & more from one place. Save searches and import jobs to your tracker."
-            badge="New"
-            href="/features/job-board-search"
-          />
-          <FeatureCard
-            icon="📄"
-            title="AI Resume Tailoring"
-            description="Get your resume rewritten with the right keywords, skills & ATS-friendly formatting for each job."
-            href="/features/resume-tailoring"
-          />
-          <FeatureCard
-            icon="✍️"
-            title="Cover Letter Generator"
-            description="Personalized cover letters crafted for each company and role — matching your tone and experience."
-            href="/features/cover-letter"
-          />
-          <FeatureCard
-            icon="🎙️"
-            title="AI Mock Interviews"
-            description="Practice with an AI interviewer via text or voice. Get real-time feedback, scores & improvement tips."
-            badge="New"
-            href="/features/mock-interviews"
-          />
-          <FeatureCard
-            icon="⭐"
-            title="STAR Story Builder"
-            description="Generate polished behavioral interview stories from your experience using the STAR method."
-            href="/features/star-stories"
-          />
-          <FeatureCard
-            icon="📋"
-            title="Application Tracker"
-            description="Track every job application — status, notes, deadlines & quick access to tailor or prep."
-            href="/features/application-tracker"
-          />
-          <FeatureCard
-            icon="📊"
-            title="Analytics Dashboard"
-            description="Visualize your job search progress with application trends, credit usage & feature insights."
-            href="/features/analytics"
-          />
-          <FeatureCard
-            icon="🔔"
-            title="Smart Reminders"
-            description="Set follow-up and todo reminders with snooze, recurring schedules & optional email alerts."
-            href="/features/smart-reminders"
-          />
+      {/* ── 3 Key Features ────────────────────────────────────────── */}
+      <div id="features" className="bg-white py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
+            Everything You Need to Land the Job
+          </h2>
+          <p className="text-center text-gray-600 text-lg mb-16 max-w-2xl mx-auto">
+            Three powerful AI tools that give you an unfair advantage
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <FeatureCard
+              icon={FileText}
+              title="AI Resume Tailoring"
+              description="Get your resume rewritten with the right keywords, skills & ATS-friendly formatting for each job. Pass applicant tracking systems and impress hiring managers."
+              href="/features/resume-tailoring"
+            />
+            <FeatureCard
+              icon={Mic}
+              title="AI Mock Interviews"
+              description="Practice with an AI interviewer via text or voice. Get real-time scoring, feedback on your answers, and personalised tips to improve before the real thing."
+              badge="Popular"
+              href="/features/mock-interviews"
+            />
+            <FeatureCard
+              icon={ClipboardList}
+              title="Application Tracker"
+              description="Track every job application in one dashboard — status, notes, deadlines, follow-ups. Never lose track of an opportunity again."
+              href="/features/application-tracker"
+            />
+          </div>
+          <div className="text-center mt-10">
+            <Link
+              href="/features"
+              className="inline-flex items-center gap-2 text-blue-600 font-semibold hover:text-blue-800 transition"
+            >
+              See all 8 features →
+            </Link>
+          </div>
         </div>
       </div>
 
-      {/* How It Works */}
-      <div className="bg-white py-20">
+      {/* ── How It Works ──────────────────────────────────────────── */}
+      <div className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
             How It Works
@@ -150,32 +201,29 @@ export default function Home() {
             From finding the right job to acing the interview — CareerPilot covers every step
           </p>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-            <Step
-              number="1"
-              title="Find Jobs"
-              description="Search across major job boards or paste a job URL to get started instantly"
-            />
-            <Step
-              number="2"
-              title="Tailor & Apply"
-              description="AI rewrites your resume & cover letter to match each job description perfectly"
-            />
-            <Step
-              number="3"
-              title="Prepare"
-              description="Practice with AI mock interviews and build STAR stories for behavioral questions"
-            />
-            <Step
-              number="4"
-              title="Track & Land It"
-              description="Track all your applications in one place and stay on top of every opportunity"
-            />
+            <Step number="1" title="Find Jobs" description="Search across major job boards or paste a job URL to get started instantly" />
+            <Step number="2" title="Tailor & Apply" description="AI rewrites your resume & cover letter to match each job description perfectly" />
+            <Step number="3" title="Prepare" description="Practice with AI mock interviews and build STAR stories for behavioral questions" />
+            <Step number="4" title="Track & Land It" description="Track all your applications in one place and stay on top of every opportunity" />
           </div>
         </div>
       </div>
 
-      {/* Pricing */}
-      <div className="bg-slate-50 py-20">
+      {/* ── Social Proof ──────────────────────────────────────────── */}
+      <div className="bg-white py-10">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <p className="text-lg font-medium text-gray-500 mb-5">Trusted by job seekers everywhere</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            <SocialProofStat value="500+" label="Job Seekers" />
+            <SocialProofStat value="10,000+" label="Resumes Tailored" />
+            <SocialProofStat value="5,000+" label="Mock Interviews" />
+            <SocialProofStat value="95%" label="ATS Pass Rate" />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Pricing ───────────────────────────────────────────────── */}
+      <div id="pricing" className="bg-slate-50 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h2 className="text-4xl font-bold text-center text-gray-900 mb-16">
             Simple Pricing
@@ -231,116 +279,14 @@ export default function Home() {
         </div>
       </div>
 
-      {/* FAQ Section */}
+      {/* ── FAQ (Top 5) ───────────────────────────────────────────── */}
       <div id="faq" className="bg-white py-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-16">
-            Frequently Asked Questions
-          </h2>
-          <div className="space-y-4">
-            <FAQItem
-              question="How does AI resume tailoring work?"
-              answer="Our AI analyzes job descriptions and compares them with your resume. It identifies missing keywords, skills, and experience that match what recruiters are looking for, then rewrites your resume with ATS-friendly formatting and targeted bullet points."
-            />
-            <FAQItem
-              question="How does the Job Board Search work?"
-              answer="CareerPilot searches across Indeed, LinkedIn, Glassdoor and other major job boards simultaneously using the JSearch API. You can filter by date, employment type, remote status, and location. Save searches for later, save jobs to your application tracker, or jump straight into tailoring your resume for a specific listing."
-            />
-            <FAQItem
-              question="What are AI Mock Interviews?"
-              answer="Our AI interviewer conducts realistic mock interviews based on the job you're targeting. Choose text or voice mode — the AI asks tailored questions, evaluates your answers in real time, and provides a detailed scorecard with feedback on content, communication, and areas to improve."
-            />
-            <FAQItem
-              question="Will my resume work with Applicant Tracking Systems (ATS)?"
-              answer="Yes! Our resume optimization ensures your resume passes ATS filters. We analyze your resume against the job description to maximize match rate and ensure it's formatted correctly."
-            />
-            <FAQItem
-              question="Can I customize the AI-generated content?"
-              answer="Absolutely. All AI-generated content (resumes, cover letters, STAR stories) is fully editable. You can customize everything to match your voice and specific experience."
-            />
-            <FAQItem
-              question="How do credits work?"
-              answer="Credits are the currency for AI-powered features. Job analysis costs 1 credit, resume tailoring costs 5 credits, cover letter generation costs 2 credits, STAR story generation costs 3 credits, mock interviews cost 5 credits, and job searches cost 1 credit. Free plan users get 60 monthly credits; paid plans get their respective allotment plus any purchased credit packs."
-            />
-            <FAQItem
-              question="What can I do on the Free plan?"
-              answer="The Free plan includes 60 monthly credits, up to 3 resumes, resume tailoring, job analysis, STAR story generation, 5 free job searches, and the application tracker. It's perfect for testing the platform. Note: cover letter generation and AI mock interviews require a Pro or Premium subscription."
-            />
-            <FAQItem
-              question="Which features require a paid subscription?"
-              answer="Cover letter generation and AI mock interviews are exclusive to Pro and Premium subscribers. All other features — resume tailoring, job analysis, STAR story generation, job board search, and the application tracker — are available on every plan including Free, as long as you have credits."
-            />
-            <FAQItem
-              question="What are credit packs?"
-              answer={`Credit packs are one-time purchases (${creditPacks.length ? creditPacks.map((p) => p.credits.toLocaleString()).join(", ").replace(/,([^,]*)$/, ", or$1") : "150, 400, or 700"} credits) that add credits to your account instantly. Purchased credits are valid for 60 days and work alongside any subscription plan. If you buy another pack before your credits expire, the expiry window is extended.`}
-            />
-            <FAQItem
-              question="Do you offer annual billing?"
-              answer="Yes! Both Pro and Premium plans offer annual billing with a 20% discount. Pro annual is $7.99/month (billed $95.88/year) and Premium annual is $23.99/month (billed $287.88/year). You can switch between monthly and annual billing anytime."
-            />
-            <FAQItem
-              question="Can I cancel or change my plan anytime?"
-              answer="Absolutely. You can upgrade, downgrade, or cancel your plan at any time with no contracts or cancellation fees. Your access continues until the end of your current billing period."
-            />
-            <FAQItem
-              question="Is my data secure?"
-              answer="Yes. We use industry-standard encryption and security practices including two-factor authentication (2FA) to protect your resume and personal information. Your data is never shared with third parties."
-            />
-          </div>
+          <FAQSection title="Frequently Asked Questions" items={topFaqs} />
         </div>
       </div>
 
-      {/* Blog & Resources Section */}
-      <div id="resources" className="bg-slate-50 py-20">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold text-center text-gray-900 mb-4">
-            Career Resources & Blog
-          </h2>
-          <p className="text-center text-gray-600 text-lg mb-16 max-w-2xl mx-auto">
-            Learn job search strategies, resume tips, and interview preparation techniques from our experts
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <ResourceCard
-              icon="📚"
-              title="Resume Best Practices"
-              description="Learn how to structure your resume, optimize for ATS systems, and highlight your achievements effectively."
-              link="/resources/resume-best-practices"
-            />
-            <ResourceCard
-              icon="💼"
-              title="Job Search Strategies"
-              description="Discover proven techniques to find the right jobs, customize applications, and stand out to recruiters."
-              link="/resources/job-search-strategies"
-            />
-            <ResourceCard
-              icon="🎤"
-              title="Interview Preparation"
-              description="Master the STAR method, prepare behavioral stories, and boost your confidence before the big day."
-              link="/resources/interview-preparation"
-            />
-            <ResourceCard
-              icon="🔍"
-              title="Beating ATS Systems"
-              description="Understand how Applicant Tracking Systems work and learn strategies to get your resume past the filters."
-              link="/resources/beating-ats-systems"
-            />
-            <ResourceCard
-              icon="✍️"
-              title="Cover Letter Guides"
-              description="Write compelling cover letters that grab attention and complement your resume perfectly."
-              link="/resources/cover-letter-guides"
-            />
-            <ResourceCard
-              icon="🎯"
-              title="Career Development"
-              description="Advance your career with tips on skill development, networking, and career transitions."
-              link="/resources/career-development"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* CTA */}
+      {/* ── Final CTA ─────────────────────────────────────────────── */}
       <div className="bg-gradient-to-r from-blue-600 to-indigo-600 py-16">
         <div className="max-w-4xl mx-auto text-center px-4">
           <h2 className="text-4xl font-bold text-white mb-6">
@@ -364,13 +310,13 @@ export default function Home() {
 }
 
 function FeatureCard({
-  icon,
+  icon: Icon,
   title,
   description,
   badge,
   href,
 }: {
-  icon: string;
+  icon: ElementType;
   title: string;
   description: string;
   badge?: string;
@@ -386,7 +332,9 @@ function FeatureCard({
           {badge}
         </span>
       )}
-      <div className="text-4xl mb-4">{icon}</div>
+      <div className="mb-4 text-blue-600">
+        <Icon className="w-9 h-9" />
+      </div>
       <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">{title}</h3>
       <p className="text-gray-600 text-sm mb-3">{description}</p>
       <span className="inline-flex items-center text-blue-600 text-sm font-semibold group-hover:translate-x-1 transition">
@@ -466,60 +414,58 @@ function PricingCard({
   );
 }
 
-function FAQItem({
-  question,
-  answer,
-}: {
-  question: string;
-  answer: string;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
+function StickyNav() {
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 40);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+  const links = [
+    { label: "Home", id: "home" },
+    { label: "Features", id: "features" },
+    { label: "Pricing", id: "pricing" },
+    { label: "FAQ", id: "faq" },
+  ];
 
   return (
-    <div className="border border-gray-200 rounded-lg">
-      <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition"
-      >
-        <h3 className="text-lg font-semibold text-gray-900 text-left">{question}</h3>
-        <span className={`text-2xl text-blue-600 transition transform ${isOpen ? "rotate-45" : ""}`}>
-          +
-        </span>
-      </button>
-      {isOpen && (
-        <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-          <p className="text-gray-600 leading-relaxed">{answer}</p>
+    <nav
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-200 pointer-events-none ${
+        scrolled ? "bg-white/95 backdrop-blur shadow-sm" : "bg-transparent"
+      }`}
+    >
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center justify-between h-14">
+        <span />
+        <div className="hidden sm:flex items-center gap-6 pointer-events-auto">
+          {links.map((l) => (
+            <a
+              key={l.id}
+              href={`#${l.id}`}
+              className="text-sm font-medium text-gray-600 hover:text-blue-600 transition"
+            >
+              {l.label}
+            </a>
+          ))}
+          <Link
+            href="/auth/register"
+            className="ml-2 px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg font-medium hover:bg-blue-700 transition"
+          >
+            Get Started
+          </Link>
         </div>
-      )}
-    </div>
+      </div>
+    </nav>
   );
 }
 
-function ResourceCard({
-  icon,
-  title,
-  description,
-  link,
-}: {
-  icon: string;
-  title: string;
-  description: string;
-  link: string;
-}) {
+function SocialProofStat({ value, label }: { value: string; label: string }) {
   return (
-    <Link
-      href={link}
-      className="group bg-white rounded-lg shadow-md p-6 hover:shadow-lg hover:border-blue-600 border border-gray-200 transition"
-    >
-      <div className="text-4xl mb-4">{icon}</div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition">
-        {title}
-      </h3>
-      <p className="text-gray-600 mb-4">{description}</p>
-      <span className="inline-flex items-center text-blue-600 font-semibold group-hover:translate-x-1 transition">
-        Learn more →
-      </span>
-    </Link>
+    <div>
+      <div className="text-3xl font-bold text-gray-900">{value}</div>
+      <div className="text-sm text-gray-500 mt-1">{label}</div>
+    </div>
   );
 }
 

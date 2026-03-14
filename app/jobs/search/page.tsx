@@ -4,6 +4,8 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/context/AuthContext";
 import { apiClient } from "@/lib/utils/api";
+import EmptyState from "@/app/components/EmptyState";
+import { Search } from "lucide-react";
 import {
   JobSearchResultItem,
   JobSearchResponse,
@@ -614,15 +616,11 @@ export default function JobSearchPage() {
 
       {/* ── Empty state ───────────────────────────────────────────── */}
       {!isSearching && results.length === 0 && !error && (
-        <div className="text-center py-20 text-gray-400">
-          <div className="text-5xl mb-4">🔎</div>
-          <p className="font-medium text-gray-600 dark:text-gray-300">
-            Search for jobs across major job boards
-          </p>
-          <p className="text-sm mt-1">
-            Enter a job title or keywords above to get started.
-          </p>
-        </div>
+        <EmptyState
+          icon={Search}
+          title="Search for Jobs"
+          subtitle="Enter a job title or keywords above to search across major job boards"
+        />
       )}
     </div>
   );

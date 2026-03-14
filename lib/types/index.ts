@@ -1014,6 +1014,15 @@ export interface AnalyticsResponse {
   message: string;
 }
 
+// Progress Summary Types (chart-optimised)
+export interface ProgressSummary {
+  weekly_applications: { week: string; count: number }[];
+  pipeline_funnel: { status: string; count: number }[];
+  activity_breakdown: { type: string; count: number }[];
+  interview_scores: { date: string; score: number; role: string }[];
+  generated_at: string;
+}
+
 // Contact Form Types
 export interface ContactFormPayload {
   name: string;
@@ -1720,7 +1729,7 @@ export interface AuthContextType {
   subscription: Subscription | null;
   currentPlan: Plan | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, full_name: string) => Promise<void>;
+  register: (email: string, password: string, full_name: string, referral_code?: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshToken: () => Promise<void>;
   verifyTwoFA: (code: string) => Promise<void>;
@@ -1780,4 +1789,112 @@ export interface AuthContextType {
   dismissTodoReminder: (todoId: string) => Promise<TodoReminder>;
   completeTodoReminder: (todoId: string) => Promise<TodoReminder>;
   getDueTodoReminders: () => Promise<DueTodoRemindersResponse>;
+}
+
+// ============================================================================
+// ACTIVITY FEED TYPES
+// ============================================================================
+
+export interface ActivityItem {
+  id: string;
+  type: string;
+  title: string;
+  description?: string | null;
+  credits_used?: number | null;
+  created_at: string;
+}
+
+export interface RecentActivityResponse {
+  items: ActivityItem[];
+  total: number;
+}
+
+// ============================================================================
+// CHAT (AI Career Coach) TYPES
+// ============================================================================
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  created_at: string;
+}
+
+export interface ChatConversation {
+  id: string;
+  title: string | null;
+  status: string;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatConversationDetail extends ChatConversation {
+  messages: ChatMessage[];
+}
+
+export interface ChatSendRequest {
+  message: string;
+  conversation_id?: string;
+}
+
+export interface ChatSendResponse {
+  conversation_id: string;
+  message: ChatMessage;
+  credits_remaining: number;
+}
+
+export interface ChatConversationListResponse {
+  conversations: ChatConversation[];
+  total: number;
+}
+
+export interface ChatAccessResponse {
+  allowed: boolean;
+  plan: string;
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+}
+
+// ── Referral System ──────────────────────────────────────────────
+
+export interface ReferralOut {
+  id: string;
+  referred_email: string | null;
+  referred_name: string | null;
+  status: string;
+  referrer_rewarded: boolean;
+  referred_rewarded: boolean;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface ReferralStatsOut {
+  referral_code: string;
+  referral_link: string;
+  total_invited: number;
+  total_completed: number;
+  total_credits_earned: number;
+}
+
+export interface ReferralListResponse {
+  referrals: ReferralOut[];
+  stats: ReferralStatsOut;
+}
+
+// ── Resume Templates ──────────────────────────────────────────────────────
+
+export interface ResumeTemplate {
+  id: string;
+  name: string;
+  description: string;
+  plan_required: string;
+  accent_color: number[];
+  preview_tag: string;
+  available: boolean;
+}
+
+export interface ResumeTemplateListResponse {
+  templates: ResumeTemplate[];
 }

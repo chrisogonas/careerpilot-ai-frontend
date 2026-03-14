@@ -85,6 +85,7 @@ import {
   EmailQuotaResponse,
   UserAnalytics,
   AnalyticsResponse,
+  ProgressSummary,
   ContactFormPayload,
   ContactFormResponse,
   TodoItem,
@@ -145,6 +146,14 @@ import {
   TailorApplyResponse,
   GenerateApplyBodyPayload,
   GenerateApplyBodyResponse,
+  RecentActivityResponse,
+  ChatSendResponse,
+  ChatConversationListResponse,
+  ChatConversationDetail,
+  ChatAccessResponse,
+  ReferralStatsOut,
+  ReferralListResponse,
+  ResumeTemplateListResponse,
 } from "@/lib/types";
 
 // Dynamically determine API URL based on environment
@@ -186,7 +195,7 @@ class ApiClient {
     }
 
     // PDF Export endpoint
-    async exportResumePDF(payload: { resume_text: string; title: string }): Promise<Blob> {
+    async exportResumePDF(payload: { resume_text: string; title: string; template?: string }): Promise<Blob> {
       const response = await fetch(`${this.baseURL}/resumes/export-pdf`, {
         method: "POST",
         headers: this.getHeaders(),
@@ -292,11 +301,11 @@ class ApiClient {
   }
 
   // Auth Endpoints
-  async register(email: string, password: string, full_name: string): Promise<AuthResponse> {
+  async register(email: string, password: string, full_name: string, referral_code?: string): Promise<AuthResponse> {
     const response = await fetch(`${this.baseURL}/auth/register`, {
       method: "POST",
       headers: this.getHeaders(),
-      body: JSON.stringify({ email, password, full_name }),
+      body: JSON.stringify({ email, password, full_name, ...(referral_code ? { referral_code } : {}) }),
     });
 
     const data = await this.handleResponse<AuthResponse>(response);
@@ -1053,6 +1062,16 @@ class ApiClient {
     return data.analytics;
   }
 
+  async getProgressSummary(weeks: number = 12): Promise<ProgressSummary> {
+    const response = await fetch(`${this.baseURL}/analytics/progress?weeks=${weeks}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+
+    const data = await this.handleResponse<{ success: boolean; progress: ProgressSummary }>(response);
+    return data.progress;
+  }
+
   // Contact Form (public - no auth required)
   async submitContactForm(payload: ContactFormPayload): Promise<ContactFormResponse> {
     const response = await fetch(`${this.baseURL}/contact`, {
@@ -1751,6 +1770,87 @@ class ApiClient {
       body: JSON.stringify(payload),
     });
     return this.handleResponse<GenerateApplyBodyResponse>(response);
+  }
+
+  // Activity Feed
+  async getRecentActivity(limit: number = 10): Promise<RecentActivityResponse> {
+    const response = await fetch(`${this.baseURL}/activity/recent?limit=${limit}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<RecentActivityResponse>(response);
+  }
+
+  // AI Career Coach (Chat)
+  async sendChatMessage(message: string, conversationId?: string): Promise<ChatSendResponse> {
+    const body: Record<string, string> = { message };
+    if (conversationId) body.conversation_id = conversationId;
+    const response = await fetch(`${this.baseURL}/chat`, {
+      method: "POST",
+      headers: this.getHeaders(),
+      body: JSON.stringify(body),
+    });
+    return this.handleResponse<ChatSendResponse>(response);
+  }
+
+  async getChatConversations(limit = 20, offset = 0): Promise<ChatConversationListResponse> {
+    const response = await fetch(`${this.baseURL}/chat/conversations?limit=${limit}&offset=${offset}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ChatConversationListResponse>(response);
+  }
+
+  async getChatConversationDetail(conversationId: string): Promise<ChatConversationDetail> {
+    const response = await fetch(`${this.baseURL}/chat/conversations/${encodeURIComponent(conversationId)}`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ChatConversationDetail>(response);
+  }
+
+  async deleteChatConversation(conversationId: string): Promise<{ status: string }> {
+    const response = await fetch(`${this.baseURL}/chat/conversations/${encodeURIComponent(conversationId)}`, {
+      method: "DELETE",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<{ status: string }>(response);
+  }
+
+  async getChatAccess(): Promise<ChatAccessResponse> {
+    const response = await fetch(`${this.baseURL}/chat/access`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ChatAccessResponse>(response);
+  }
+
+  // ── Referrals ─────────────────────────────────────────────────
+
+  async getReferralStats(): Promise<ReferralStatsOut> {
+    const response = await fetch(`${this.baseURL}/referrals/stats`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ReferralStatsOut>(response);
+  }
+
+  async getReferralList(): Promise<ReferralListResponse> {
+    const response = await fetch(`${this.baseURL}/referrals/list`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ReferralListResponse>(response);
+  }
+
+  // ── Resume Templates ────────────────────────────────────────
+
+  async getResumeTemplates(): Promise<ResumeTemplateListResponse> {
+    const response = await fetch(`${this.baseURL}/resumes/templates`, {
+      method: "GET",
+      headers: this.getHeaders(),
+    });
+    return this.handleResponse<ResumeTemplateListResponse>(response);
   }
 }
 

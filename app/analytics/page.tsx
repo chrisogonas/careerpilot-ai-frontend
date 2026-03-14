@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { UserAnalytics } from "@/lib/types";
+import { ClipboardList, Sparkles, Target, CalendarDays, Lightbulb, BarChart3, FileText, Phone, TrendingUp } from "lucide-react";
+import { AnalyticsSkeleton } from "@/app/components/Skeleton";
+import dynamic from "next/dynamic";
+
+const ProgressCharts = dynamic(() => import("@/app/components/ProgressCharts"), { ssr: false });
 
 export default function AnalyticsPage() {
   const router = useRouter();
@@ -34,15 +39,7 @@ export default function AnalyticsPage() {
   }, [isLoading, isAuthenticated, router]);
 
   if (isLoading && !analytics) {
-    return (
-      <div className="min-h-screen bg-slate-50 py-8 px-4">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center">
-            <p className="text-slate-600">Loading your analytics...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <AnalyticsSkeleton />;
   }
 
   if (!analytics) {
@@ -107,7 +104,7 @@ export default function AnalyticsPage() {
                 <p className="text-sm font-semibold text-slate-600 mb-1">Total Applications</p>
                 <p className="text-3xl font-bold text-slate-900">{metrics.total_applications}</p>
               </div>
-              <div className="text-4xl">📋</div>
+              <ClipboardList className="w-10 h-10 text-slate-400" />
             </div>
           </div>
 
@@ -118,7 +115,7 @@ export default function AnalyticsPage() {
                 <p className="text-sm font-semibold text-slate-600 mb-1">Success Rate</p>
                 <p className="text-3xl font-bold text-green-600">{metrics.success_rate.toFixed(1)}%</p>
               </div>
-              <div className="text-4xl">✨</div>
+              <Sparkles className="w-10 h-10 text-green-400" />
             </div>
           </div>
 
@@ -129,7 +126,7 @@ export default function AnalyticsPage() {
                 <p className="text-sm font-semibold text-slate-600 mb-1">Offer Rate</p>
                 <p className="text-3xl font-bold text-blue-600">{applicationConversionRate}%</p>
               </div>
-              <div className="text-4xl">🎯</div>
+              <Target className="w-10 h-10 text-blue-400" />
             </div>
           </div>
 
@@ -140,9 +137,17 @@ export default function AnalyticsPage() {
                 <p className="text-sm font-semibold text-slate-600 mb-1">Avg Days to Decision</p>
                 <p className="text-3xl font-bold text-slate-900">{metrics.average_days_to_decision}</p>
               </div>
-              <div className="text-4xl">📅</div>
+              <CalendarDays className="w-10 h-10 text-slate-400" />
             </div>
           </div>
+        </div>
+
+        {/* Progress Charts */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4 flex items-center gap-2">
+            <TrendingUp className="w-6 h-6" /> Progress Charts
+          </h2>
+          <ProgressCharts />
         </div>
 
         {/* Activity Breakdown */}
@@ -372,22 +377,22 @@ export default function AnalyticsPage() {
 
         {/* Recommendations */}
         <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-bold text-blue-900 mb-4">💡 Analytics Tips</h3>
+          <h3 className="text-lg font-bold text-blue-900 mb-4 flex items-center gap-2"><Lightbulb className="w-5 h-5" /> Analytics Tips</h3>
           <ul className="space-y-3 text-blue-900">
-            <li className="flex gap-3">
-              <span className="font-bold">📊</span>
+            <li className="flex gap-3 items-start">
+              <BarChart3 className="w-5 h-5 shrink-0 mt-0.5" />
               <span>Monitor your success rate to identify what's working in your job search</span>
             </li>
-            <li className="flex gap-3">
-              <span className="font-bold">📝</span>
+            <li className="flex gap-3 items-start">
+              <FileText className="w-5 h-5 shrink-0 mt-0.5" />
               <span>Track which resumes and tailoring approaches generate the most offers</span>
             </li>
-            <li className="flex gap-3">
-              <span className="font-bold">📞</span>
+            <li className="flex gap-3 items-start">
+              <Phone className="w-5 h-5 shrink-0 mt-0.5" />
               <span>Follow-up consistently - applications with follow-ups have higher success rates</span>
             </li>
-            <li className="flex gap-3">
-              <span className="font-bold">🎯</span>
+            <li className="flex gap-3 items-start">
+              <Target className="w-5 h-5 shrink-0 mt-0.5" />
               <span>Focus on companies and locations where your success rate is highest</span>
             </li>
           </ul>

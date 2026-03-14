@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Plan, CreditPack } from "@/lib/types";
+import { FileText, Star, CheckCircle } from "lucide-react";
+import FAQSection from "@/app/components/FAQ";
 
 export default function SubscribePage() {
   const router = useRouter();
@@ -94,7 +96,7 @@ export default function SubscribePage() {
   if (isLoading2 || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
       </div>
     );
   }
@@ -118,7 +120,7 @@ export default function SubscribePage() {
               onClick={() => setSelectedBillingCycle("monthly")}
               className={`px-6 py-2 rounded-lg font-semibold transition-all ${
                 selectedBillingCycle === "monthly"
-                  ? "bg-purple-600 text-white"
+                  ? "bg-blue-600 text-white"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
@@ -128,7 +130,7 @@ export default function SubscribePage() {
               onClick={() => setSelectedBillingCycle("yearly")}
               className={`px-6 py-2 rounded-lg font-semibold transition-all ${
                 selectedBillingCycle === "yearly"
-                  ? "bg-purple-600 text-white"
+                  ? "bg-blue-600 text-white"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"
               }`}
             >
@@ -161,7 +163,7 @@ export default function SubscribePage() {
                   key={plan.id}
                   className={`relative rounded-xl overflow-hidden transition-all ${
                     isCurrentPlan
-                      ? "ring-2 ring-purple-500 scale-105"
+                      ? "ring-2 ring-blue-500 scale-105"
                       : "hover:scale-105"
                   }`}
                 >
@@ -169,7 +171,7 @@ export default function SubscribePage() {
                   <div
                     className={`absolute inset-0 ${
                       plan.name === "premium"
-                        ? "bg-gradient-to-br from-purple-50 to-indigo-100 border border-purple-200"
+                        ? "bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-200"
                         : plan.name === "pro"
                         ? "bg-gradient-to-br from-blue-50 to-sky-100 border border-blue-200"
                         : "bg-gradient-to-br from-gray-50 to-slate-100 border border-gray-200"
@@ -180,7 +182,7 @@ export default function SubscribePage() {
                   <div className="relative p-8 h-full flex flex-col">
                     {/* Plan Name */}
                     <h3 className={`text-2xl font-bold mb-2 capitalize ${
-                      plan.name === "premium" ? "text-purple-800" : plan.name === "pro" ? "text-blue-800" : "text-gray-800"
+                      plan.name === "premium" ? "text-blue-800" : plan.name === "pro" ? "text-blue-800" : "text-gray-800"
                     }`}>{plan.display_name}</h3>
                     <p className="text-gray-500 text-sm mb-6">{plan.description}</p>
 
@@ -200,8 +202,8 @@ export default function SubscribePage() {
 
                     {/* Features */}
                     <ul className="space-y-2 mb-8 flex-grow">
-                      <li className="text-gray-700">📄 {plan.max_resumes === -1 ? "Unlimited" : plan.max_resumes} Resume(s)</li>
-                      <li className="text-gray-700">⭐ {plan.monthly_credits} Monthly Credits</li>
+                      <li className="flex items-center gap-2 text-gray-700"><FileText className="w-4 h-4 text-blue-600 flex-shrink-0" /> {plan.max_resumes === -1 ? "Unlimited" : plan.max_resumes} Resume(s)</li>
+                      <li className="flex items-center gap-2 text-gray-700"><Star className="w-4 h-4 text-blue-600 flex-shrink-0" /> {plan.monthly_credits} Monthly Credits</li>
                       {plan.features.map((feature, i) => (
                         <li key={i} className="text-gray-700">
                           ✓ {feature}
@@ -215,7 +217,7 @@ export default function SubscribePage() {
                         disabled
                         className="w-full py-3 bg-gray-200 text-gray-500 rounded-lg font-semibold cursor-not-allowed"
                       >
-                        🎉 Your Current Plan
+                        <CheckCircle className="w-5 h-5 inline mr-1" /> Your Current Plan
                       </button>
                     ) : plan.name === "free" ? (
                       <button
@@ -265,12 +267,12 @@ export default function SubscribePage() {
                     key={pack.id}
                     className={`relative bg-white rounded-2xl p-8 border-2 transition-all hover:shadow-lg ${
                       pack.popular
-                        ? "border-purple-500 shadow-md"
+                        ? "border-blue-500 shadow-md"
                         : "border-gray-200"
                     }`}
                   >
                     {pack.popular && (
-                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-purple-600 text-white text-sm font-semibold px-4 py-1 rounded-full">
+                      <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-sm font-semibold px-4 py-1 rounded-full">
                         Best Value
                       </div>
                     )}
@@ -281,9 +283,9 @@ export default function SubscribePage() {
                         <span className="text-4xl font-bold">${pack.price_usd}</span>
                         <span className="text-gray-500 ml-1">one-time</span>
                       </div>
-                      <div className="bg-purple-50 rounded-lg py-3 px-4 mb-4">
-                        <span className="text-2xl font-bold text-purple-700">{pack.credits.toLocaleString()}</span>
-                        <span className="text-purple-600 ml-1">credits</span>
+                      <div className="bg-blue-50 rounded-lg py-3 px-4 mb-4">
+                        <span className="text-2xl font-bold text-blue-700">{pack.credits.toLocaleString()}</span>
+                        <span className="text-blue-600 ml-1">credits</span>
                       </div>
                       <p className="text-gray-600 text-sm mb-6">{pack.description}</p>
                       <button
@@ -291,7 +293,7 @@ export default function SubscribePage() {
                         disabled={isBuying}
                         className={`w-full py-3 rounded-lg font-semibold transition-all ${
                           pack.popular
-                            ? "bg-purple-600 hover:bg-purple-700 text-white"
+                            ? "bg-blue-600 hover:bg-blue-700 text-white"
                             : "bg-slate-700 hover:bg-slate-600 text-white"
                         } disabled:opacity-50 disabled:cursor-not-allowed`}
                       >
@@ -311,119 +313,46 @@ export default function SubscribePage() {
 
         {/* FAQ Section */}
         <div className="mt-20 max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold mb-12 text-center">Frequently Asked Questions</h2>
-
-          <div className="space-y-6">
-            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
-              <summary className="flex justify-between items-center font-semibold">
-                Can I change my plan anytime?
-                <span className="group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-4 text-gray-700">
-                Yes! You can upgrade or downgrade your plan at any time. Changes take effect
-                on your next billing cycle. When you upgrade, you immediately receive the new
-                plan&apos;s full monthly credit allotment.
-              </p>
-            </details>
-
-            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
-              <summary className="flex justify-between items-center font-semibold">
-                What&apos;s the difference between monthly and annual billing?
-                <span className="group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-4 text-gray-700">
-                Annual billing saves you 20% compared to monthly. Pro annual is $7.99/month
-                (billed $95.88/year) and Premium annual is $23.99/month (billed $287.88/year).
-                You get the same features and credits regardless of billing cycle.
-              </p>
-            </details>
-
-            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
-              <summary className="flex justify-between items-center font-semibold">
-                How do credits work?
-                <span className="group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-4 text-gray-700">
-                Credits are the currency for AI-powered features. Job analysis costs 1 credit,
-                resume tailoring costs 2 credits, cover letter generation costs 2 credits, and
-                STAR story generation costs 1 credit. Your plan&apos;s monthly credits reset each
-                billing cycle. Subscription credits are consumed first, then purchased credits.
-              </p>
-            </details>
-
-            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
-              <summary className="flex justify-between items-center font-semibold">
-                Which features require a paid subscription?
-                <span className="group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-4 text-gray-700">
-                Cover letter generation is available on all plans, including Free, as long as
-                you have credits. Paid plans offer more monthly credits, additional resume
-                storage, and premium support.
-              </p>
-            </details>
-
-            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
-              <summary className="flex justify-between items-center font-semibold">
-                Do purchased credit packs expire?
-                <span className="group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-4 text-gray-700">
-                Yes, purchased credit packs are valid for 60 days from the date of purchase. If you
-                buy another pack before your existing credits expire, the expiry window is extended.
-                Your subscription credits are used first each month, so purchased credits last even
-                longer. For the best per-credit value, consider a Pro or Premium subscription.
-              </p>
-            </details>
-
-            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
-              <summary className="flex justify-between items-center font-semibold">
-                How do credit packs compare to subscriptions?
-                <span className="group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-4 text-gray-700">
-                Subscriptions offer the best per-credit value — Pro at ~$0.02/credit and Premium at
-                ~$0.015/credit — plus more resume storage and premium support.
-                Credit packs (starting at $0.025/credit) are ideal for occasional extra usage
-                without a recurring commitment. They work alongside any plan.
-              </p>
-            </details>
-
-            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
-              <summary className="flex justify-between items-center font-semibold">
-                Can I cancel my subscription?
-                <span className="group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-4 text-gray-700">
-                Yes, you can cancel your subscription anytime from your billing settings with no
-                cancellation fees. Your access continues until the end of your current billing
-                period. Any remaining purchased credits stay in your account until they expire.
-              </p>
-            </details>
-
-            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
-              <summary className="flex justify-between items-center font-semibold">
-                What payment methods do you accept?
-                <span className="group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-4 text-gray-700">
-                We accept all major credit and debit cards through Stripe, including Visa, Mastercard,
-                American Express, and Discover. All payments are processed securely through Stripe.
-              </p>
-            </details>
-
-            <details className="bg-white rounded-lg p-6 cursor-pointer group border border-gray-200">
-              <summary className="flex justify-between items-center font-semibold">
-                Do you offer refunds?
-                <span className="group-open:rotate-180 transition-transform">▼</span>
-              </summary>
-              <p className="mt-4 text-gray-700">
-                We offer a 30-day money-back guarantee on all paid subscriptions. If you&apos;re not
-                satisfied, contact our support team for a full refund. Credit pack purchases are
-                non-refundable once credits have been used.
-              </p>
-            </details>
-          </div>
+          <FAQSection
+            items={[
+              {
+                question: "Can I change my plan anytime?",
+                answer: "Yes! You can upgrade or downgrade your plan at any time. Changes take effect on your next billing cycle. When you upgrade, you immediately receive the new plan's full monthly credit allotment.",
+              },
+              {
+                question: "What's the difference between monthly and annual billing?",
+                answer: "Annual billing saves you 20% compared to monthly. Pro annual is $7.99/month (billed $95.88/year) and Premium annual is $23.99/month (billed $287.88/year). You get the same features and credits regardless of billing cycle.",
+              },
+              {
+                question: "How do credits work?",
+                answer: "Credits are the currency for AI-powered features. Job analysis costs 1 credit, resume tailoring costs 2 credits, cover letter generation costs 2 credits, and STAR story generation costs 1 credit. Your plan's monthly credits reset each billing cycle. Subscription credits are consumed first, then purchased credits.",
+              },
+              {
+                question: "Which features require a paid subscription?",
+                answer: "Cover letter generation is available on all plans, including Free, as long as you have credits. Paid plans offer more monthly credits, additional resume storage, and premium support.",
+              },
+              {
+                question: "Do purchased credit packs expire?",
+                answer: "Yes, purchased credit packs are valid for 60 days from the date of purchase. If you buy another pack before your existing credits expire, the expiry window is extended. Your subscription credits are used first each month, so purchased credits last even longer. For the best per-credit value, consider a Pro or Premium subscription.",
+              },
+              {
+                question: "How do credit packs compare to subscriptions?",
+                answer: "Subscriptions offer the best per-credit value — Pro at ~$0.02/credit and Premium at ~$0.015/credit — plus more resume storage and premium support. Credit packs (starting at $0.025/credit) are ideal for occasional extra usage without a recurring commitment. They work alongside any plan.",
+              },
+              {
+                question: "Can I cancel my subscription?",
+                answer: "Yes, you can cancel your subscription anytime from your billing settings with no cancellation fees. Your access continues until the end of your current billing period. Any remaining purchased credits stay in your account until they expire.",
+              },
+              {
+                question: "What payment methods do you accept?",
+                answer: "We accept all major credit and debit cards through Stripe, including Visa, Mastercard, American Express, and Discover. All payments are processed securely through Stripe.",
+              },
+              {
+                question: "Do you offer refunds?",
+                answer: "We offer a 30-day money-back guarantee on all paid subscriptions. If you're not satisfied, contact our support team for a full refund. Credit pack purchases are non-refundable once credits have been used.",
+              },
+            ]}
+          />
         </div>
       </div>
     </main>

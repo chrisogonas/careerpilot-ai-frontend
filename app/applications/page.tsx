@@ -6,8 +6,12 @@ import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { JobApplication, JobApplicationStatus } from "@/lib/types";
 import Pagination from "@/app/components/Pagination";
+import EmptyState from "@/app/components/EmptyState";
+import ApplicationPipeline from "@/app/components/ApplicationPipeline";
+import { apiClient } from "@/lib/utils/api";
+import { Briefcase } from "lucide-react";
 
-type ViewMode = "cards" | "table";
+type ViewMode = "cards" | "table" | "pipeline";
 type AppSortField = "job_title" | "company_name" | "status" | "applied_date" | "location" | "created_at";
 type SortDir = "asc" | "desc";
 
@@ -138,6 +142,18 @@ export default function ApplicationsPage() {
     currentPage * pageSize
   );
 
+  const handleStatusChange = async (id: string, newStatus: JobApplicationStatus) => {
+    try {
+      await apiClient.updateApplication(id, { status: newStatus });
+      setApplications(prev =>
+        prev.map(a => (a.id === id ? { ...a, status: newStatus } : a))
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Failed to update status";
+      setLocalError(message);
+    }
+  };
+
   const toggleSort = (field: AppSortField) => {
     if (sortField === field) {
       setSortDir(d => d === "asc" ? "desc" : "asc");
@@ -237,6 +253,16 @@ export default function ApplicationsPage() {
               >
                 Table
               </button>
+              <button
+                onClick={() => setViewMode("pipeline")}
+                className={`px-4 py-2 text-sm font-medium transition ${
+                  viewMode === "pipeline"
+                    ? "bg-blue-600 text-white"
+                    : "bg-white text-slate-700 hover:bg-slate-100"
+                }`}
+              >
+                Pipeline
+              </button>
             </div>
           </div>
         )}
@@ -244,6 +270,14 @@ export default function ApplicationsPage() {
         {/* Applications Content */}
         {filteredApplications.length > 0 ? (
           <>
+            {/* === Pipeline View === */}
+            {viewMode === "pipeline" && (
+              <ApplicationPipeline
+                applications={filteredApplications}
+                onStatusChange={handleStatusChange}
+              />
+            )}
+
             {/* === Card View === */}
             {viewMode === "cards" && (
               <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -384,34 +418,25 @@ export default function ApplicationsPage() {
             />
           </>
         ) : (
-          <div className="bg-white rounded-lg p-12 text-center border border-slate-200">
-            <div className="text-slate-900 mb-2">
-              <p className="text-xl font-bold mb-2">No Applications Found</p>
-              {applications.length > 0 && (filterStatus !== "all" || searchQuery.trim()) && (
-                <p className="text-slate-600 mb-4">No applications match your current filters</p>
-              )}
-            </div>
-            <p className="text-slate-600 mb-6">
-              {applications.length === 0
-                ? "Start tracking your job applications"
-                : "Try adjusting your search or filter"}
-            </p>
-            {applications.length === 0 ? (
-              <Link
-                href="/applications/new"
-                className="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-8 rounded-lg transition"
-              >
-                Create First Application
-              </Link>
-            ) : (
+          applications.length === 0 ? (
+            <EmptyState
+              icon={Briefcase}
+              title="No Applications Yet"
+              subtitle="Start tracking your job applications to stay organized"
+              actionLabel="Create First Application"
+              actionHref="/applications/new"
+            />
+          ) : (
+            <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+              <p className="text-gray-500">No applications match your current filters.</p>
               <button
                 onClick={() => { setSearchQuery(""); setFilterStatus("all"); }}
-                className="text-blue-600 hover:text-blue-800 font-medium"
+                className="mt-3 text-blue-600 hover:underline text-sm"
               >
                 Clear all filters
               </button>
-            )}
-          </div>
+            </div>
+          )
         )}
 
         {/* Tips Section */}

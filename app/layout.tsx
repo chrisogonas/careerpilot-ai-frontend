@@ -4,6 +4,7 @@ import Sidebar from "./components/Sidebar";
 import GracePeriodBanner from "./components/GracePeriodBanner";
 import ReminderBanner from "./components/ReminderBanner";
 import NotificationTray from "./components/NotificationTray";
+import ChatWidget from "./components/ChatWidget";
 import { AuthProvider } from "@/lib/context/AuthContext";
 import { NotificationProvider } from "@/lib/context/NotificationContext";
 import "./globals.css";
@@ -29,7 +30,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
@@ -37,12 +38,13 @@ export default function RootLayout({
         <AuthProvider>
           <NotificationProvider>
             <Sidebar />
-            <div className="pt-14">
+            <div className="pt-14 lg:pl-64">
               <GracePeriodBanner />
               <ReminderBanner />
               {children}
             </div>
             <NotificationTray />
+            <ChatWidget />
           </NotificationProvider>
         </AuthProvider>
       </body>

@@ -6,6 +6,9 @@ import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 import { Resume } from "@/lib/types";
 import Pagination from "@/app/components/Pagination";
+import { ResumesSkeleton } from "@/app/components/Skeleton";
+import EmptyState from "@/app/components/EmptyState";
+import { FileText } from "lucide-react";
 
 type ViewMode = "cards" | "table";
 type SortField = "title" | "status" | "version" | "tailor_count" | "created_at" | "last_used_at";
@@ -148,11 +151,7 @@ export default function ResumesPage() {
   };
 
   if (isLoading || isLoading2) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
+    return <ResumesSkeleton />;
   }
 
   return (
@@ -412,17 +411,13 @@ export default function ResumesPage() {
             </div>
           )
         ) : (
-          <div className="text-center py-16 bg-white rounded-lg border border-gray-200">
-            <div className="text-5xl mb-4">📄</div>
-            <h2 className="text-2xl font-semibold text-gray-900 mb-2">No Resumes Yet</h2>
-            <p className="text-gray-600 mb-6">Create your first resume to get started</p>
-            <Link
-              href="/resumes/new"
-              className="inline-block px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors"
-            >
-              ➕ Create Resume
-            </Link>
-          </div>
+          <EmptyState
+            icon={FileText}
+            title="No Resumes Yet"
+            subtitle="Create your first resume to get started"
+            actionLabel="Create Resume"
+            actionHref="/resumes/new"
+          />
         )}
 
         {/* Tips Section */}

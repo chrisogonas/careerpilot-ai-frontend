@@ -3,6 +3,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/context/AuthContext";
+import EmptyState from "@/app/components/EmptyState";
+import { ClipboardList } from "lucide-react";
 import {
   TodoItem,
   TodoCategory,
@@ -453,11 +455,11 @@ export default function TodosPage() {
 
         {/* Todo list */}
         {filtered.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-xl border">
-            <div className="text-5xl mb-4">📋</div>
-            <h3 className="text-lg font-semibold text-gray-700">No tasks yet</h3>
-            <p className="text-gray-500 mt-1">Click &quot;New Task&quot; to add your first to-do item.</p>
-          </div>
+          <EmptyState
+            icon={ClipboardList}
+            title="No Tasks Yet"
+            subtitle='Click "New Task" to add your first to-do item.'
+          />
         ) : (
           <div className="space-y-3">
             {filtered.map((todo) => (

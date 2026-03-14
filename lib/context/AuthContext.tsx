@@ -1,9 +1,15 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
-import { User, AuthContextType, AuthResponse, Subscription, Plan, BillingEvent, CreditPack, Resume, CreateResumePayload, UpdateResumePayload, ResumeUploadPayload, ResumeUploadResponse, ResumeFileUploadResponse, ParsedResumeData, JobApplication, CreateApplicationPayload, UpdateApplicationPayload, AddFollowUpPayload, FollowUp, UserAnalytics, GetApplicationResponse, CreateReminderPayload, UpdateReminderPayload, Reminder, DueRemindersResponse, RemindersListResponse, SnoozeDuration, EmailQuotaResponse, TodoItem, TodoSubtask, TodoReminder, TodoListResponse, CreateTodoPayload, UpdateTodoPayload, CreateTodoReminderPayload, DueTodoRemindersResponse, TodoStatus, TodoCategory, TodoPriority } from "@/lib/types";
+import { User, AuthContextType, AuthResponse, Subscription, Plan, Resume, JobApplication } from "@/lib/types";
 import { apiClient } from "@/lib/utils/api";
 import { useInactivityTimeout } from "@/lib/hooks/useInactivityTimeout";
+import { useSubscriptionApi } from "@/lib/hooks/useSubscription";
+import { useResumesApi } from "@/lib/hooks/useResumes";
+import { useApplicationsApi } from "@/lib/hooks/useApplications";
+import { useRemindersApi } from "@/lib/hooks/useReminders";
+import { useTodosApi } from "@/lib/hooks/useTodos";
+import { useAnalyticsApi } from "@/lib/hooks/useAnalytics";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -21,6 +27,7 @@ function authResponseToUser(response: AuthResponse): User {
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
+  // ─── Core Auth State ───
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,11 +36,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isEmailVerified, setIsEmailVerified] = useState(true);
   const [pendingEmailVerification, setPendingEmailVerification] = useState(false);
   const [tempVerificationEmail, setTempVerificationEmail] = useState<string | null>(null);
+  const [inactivityWarning, setInactivityWarning] = useState(false);
+
+  // ─── Shared Domain State (used by global components) ───
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [currentPlan, setCurrentPlan] = useState<Plan | null>(null);
   const [resumes, setResumes] = useState<Resume[]>([]);
   const [applications, setApplications] = useState<JobApplication[]>([]);
-  const [inactivityWarning, setInactivityWarning] = useState(false);
+
+  // ─── Domain Hooks ───
+  const subscriptionApi = useSubscriptionApi();
+  const resumesApi = useResumesApi(setResumes);
+  const applicationsApi = useApplicationsApi(setApplications);
+  const remindersApi = useRemindersApi();
+  const todosApi = useTodosApi();
+  const analyticsApi = useAnalyticsApi();
 
   // --- Inactivity auto-logout (30 min) ---
   const handleInactivityLogout = useCallback(async () => {
@@ -144,11 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const register = async (email: string, password: string, full_name: string) => {
+  const register = async (email: string, password: string, full_name: string, referral_code?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.register(email, password, full_name);
+      const response = await apiClient.register(email, password, full_name, referral_code);
       // After registration, mark email as not verified and pending verification
       setIsEmailVerified(false);
       setPendingEmailVerification(true);
@@ -290,11 +307,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // ─── Subscription/Billing (delegates to useSubscriptionApi) ───
   const getSubscription = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await apiClient.getSubscription();
+      const data = await subscriptionApi.getSubscription();
       setSubscription(data.subscription);
       setCurrentPlan(data.current_plan);
     } catch (err) {
@@ -310,7 +328,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      return await apiClient.getPlans();
+      return await subscriptionApi.getPlans();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch plans";
       setError(message);
@@ -328,12 +346,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.createCheckoutSession({
-        price_id: priceId,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-      });
-      return response.url;
+      return await subscriptionApi.createCheckoutSession(priceId, successUrl, cancelUrl);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create checkout session";
       setError(message);
@@ -350,12 +363,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.updateSubscription({
-        subscription_id: subscription?.id || "",
-        new_plan: newPlan,
-        billing_cycle: billingCycle,
-      });
-      // Refresh subscription data
+      await subscriptionApi.updateSubscription(subscription?.id || "", newPlan, billingCycle);
       await getSubscription();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update subscription";
@@ -370,11 +378,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.cancelSubscription({
-        subscription_id: subscription?.id,
-        at_period_end: atPeriodEnd,
-      });
-      // Refresh subscription data
+      await subscriptionApi.cancelSubscription(subscription?.id, atPeriodEnd);
       await getSubscription();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to cancel subscription";
@@ -385,12 +389,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const getBillingHistory = async (): Promise<BillingEvent[]> => {
+  const getBillingHistory = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.getBillingHistory();
-      return response.events;
+      return await subscriptionApi.getBillingHistory();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch billing history";
       setError(message);
@@ -400,12 +403,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const getCreditPacks = async (): Promise<CreditPack[]> => {
+  const getCreditPacks = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.getCreditPacks();
-      return response.packs;
+      return await subscriptionApi.getCreditPacks();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch credit packs";
       setError(message);
@@ -423,12 +425,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.createCreditPackCheckout(
-        packId,
-        successUrl,
-        cancelUrl
-      );
-      return response.url;
+      return await subscriptionApi.createCreditPackCheckout(packId, successUrl, cancelUrl);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create credit pack checkout";
       setError(message);
@@ -438,13 +435,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const getResumes = async (): Promise<Resume[]> => {
+  // ─── Resume Management (delegates to useResumesApi) ───
+  const getResumes = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const fetchedResumes = await apiClient.getResumes();
-      setResumes(fetchedResumes);
-      return fetchedResumes;
+      return await resumesApi.getResumes();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch resumes";
       setError(message);
@@ -454,11 +450,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const getResume = async (id: string): Promise<Resume> => {
+  const getResume = async (id: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      return await apiClient.getResume(id);
+      return await resumesApi.getResume(id);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch resume";
       setError(message);
@@ -468,13 +464,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const createResume = async (payload: CreateResumePayload): Promise<Resume> => {
+  const createResume = async (payload: any) => {
     setIsLoading(true);
     setError(null);
     try {
-      const newResume = await apiClient.createResume(payload);
-      setResumes([...resumes, newResume]);
-      return newResume;
+      return await resumesApi.createResume(payload);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create resume";
       setError(message);
@@ -484,13 +478,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateResume = async (id: string, payload: UpdateResumePayload): Promise<Resume> => {
+  const updateResume = async (id: string, payload: any) => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedResume = await apiClient.updateResume(id, payload);
-      setResumes(resumes.map(r => r.id === id ? updatedResume : r));
-      return updatedResume;
+      return await resumesApi.updateResume(id, payload);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update resume";
       setError(message);
@@ -504,8 +496,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      await apiClient.deleteResume(id);
-      setResumes(resumes.filter(r => r.id !== id));
+      await resumesApi.deleteResume(id);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete resume";
       setError(message);
@@ -515,13 +506,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const setDefaultResume = async (id: string): Promise<Resume> => {
+  const setDefaultResume = async (id: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedResume = await apiClient.setDefaultResume(id);
-      setResumes(resumes.map(r => ({ ...r, is_default: r.id === id })));
-      return updatedResume;
+      return await resumesApi.setDefaultResume(id);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to set default resume";
       setError(message);
@@ -531,13 +520,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const duplicateResume = async (resumeId: string, newTitle: string): Promise<Resume> => {
+  const duplicateResume = async (resumeId: string, newTitle: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const duplicatedResume = await apiClient.duplicateResume(resumeId, newTitle);
-      setResumes([...resumes, duplicatedResume]);
-      return duplicatedResume;
+      return await resumesApi.duplicateResume(resumeId, newTitle);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to duplicate resume";
       setError(message);
@@ -547,12 +534,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const uploadResume = async (payload: ResumeUploadPayload): Promise<ResumeUploadResponse> => {
+  const uploadResume = async (payload: any) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.uploadResume(payload);
-      return response;
+      return await resumesApi.uploadResume(payload);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to upload resume";
       setError(message);
@@ -562,12 +548,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const uploadResumeFile = async (file: File): Promise<ResumeFileUploadResponse> => {
+  const uploadResumeFile = async (file: File) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await apiClient.uploadResumeFile(file);
-      return response;
+      return await resumesApi.uploadResumeFile(file);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to upload resume file";
       setError(message);
@@ -577,14 +562,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // Job Application Methods
-  const getApplications = async (): Promise<JobApplication[]> => {
+  // ─── Job Applications (delegates to useApplicationsApi) ───
+  const getApplications = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await apiClient.getApplications();
-      setApplications(data);
-      return data;
+      return await applicationsApi.getApplications();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch applications";
       setError(message);
@@ -594,12 +577,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const getApplication = async (id: string): Promise<GetApplicationResponse> => {
+  const getApplication = async (id: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await apiClient.getApplication(id);
-      return data;
+      return await applicationsApi.getApplication(id);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch application";
       setError(message);
@@ -609,13 +591,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const createApplication = async (payload: CreateApplicationPayload): Promise<JobApplication> => {
+  const createApplication = async (payload: any) => {
     setIsLoading(true);
     setError(null);
     try {
-      const newApplication = await apiClient.createApplication(payload);
-      setApplications([...applications, newApplication]);
-      return newApplication;
+      return await applicationsApi.createApplication(payload);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to create application";
       setError(message);
@@ -625,13 +605,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const updateApplication = async (id: string, payload: UpdateApplicationPayload): Promise<JobApplication> => {
+  const updateApplication = async (id: string, payload: any) => {
     setIsLoading(true);
     setError(null);
     try {
-      const updatedApplication = await apiClient.updateApplication(id, payload);
-      setApplications(applications.map(a => a.id === id ? updatedApplication : a));
-      return updatedApplication;
+      return await applicationsApi.updateApplication(id, payload);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to update application";
       setError(message);
@@ -645,8 +623,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsLoading(true);
     setError(null);
     try {
-      await apiClient.deleteApplication(id);
-      setApplications(applications.filter(a => a.id !== id));
+      await applicationsApi.deleteApplication(id);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete application";
       setError(message);
@@ -656,18 +633,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const addFollowUp = async (applicationId: string, payload: AddFollowUpPayload): Promise<FollowUp> => {
+  const addFollowUp = async (applicationId: string, payload: any) => {
     setIsLoading(true);
     setError(null);
     try {
-      const followUp = await apiClient.addFollowUp(applicationId, payload);
-      // Update the application's follow_up_count
-      setApplications(applications.map(a => 
-        a.id === applicationId 
-          ? { ...a, follow_up_count: a.follow_up_count + 1, last_follow_up_at: new Date().toISOString() }
-          : a
-      ));
-      return followUp;
+      return await applicationsApi.addFollowUp(applicationId, payload);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to add follow-up";
       setError(message);
@@ -677,15 +647,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const deleteFollowUp = async (applicationId: string, followUpId: string): Promise<void> => {
+  const deleteFollowUp = async (applicationId: string, followUpId: string) => {
     try {
-      await apiClient.deleteFollowUp(applicationId, followUpId);
-      // Update the application's follow_up_count
-      setApplications(applications.map(a => 
-        a.id === applicationId 
-          ? { ...a, follow_up_count: Math.max(0, a.follow_up_count - 1) }
-          : a
-      ));
+      await applicationsApi.deleteFollowUp(applicationId, followUpId);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to delete follow-up";
       setError(message);
@@ -693,106 +657,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // =========================================================================
-  // Reminder Methods (Follow-Up Reminders — Pro/Premium only)
-  // =========================================================================
+  // ─── Reminders (delegates to useRemindersApi) ───
+  const {
+    getDueReminders,
+    getReminders,
+    createReminder,
+    dismissReminder,
+    snoozeReminder,
+    completeReminder,
+    deleteReminder,
+    updateReminder,
+    getEmailQuota,
+  } = remindersApi;
 
-  const getDueReminders = async (): Promise<DueRemindersResponse> => {
-    try {
-      return await apiClient.getDueReminders();
-    } catch {
-      // Silently fail — don't block the banner from showing
-      return { due_reminders: [], count: 0 };
-    }
-  };
-
-  const getReminders = async (status?: string): Promise<RemindersListResponse> => {
-    try {
-      return await apiClient.getReminders(status);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch reminders";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const createReminder = async (payload: CreateReminderPayload): Promise<Reminder> => {
-    try {
-      return await apiClient.createReminder(payload);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const dismissReminder = async (reminderId: string): Promise<Reminder> => {
-    try {
-      return await apiClient.dismissReminder(reminderId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to dismiss reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const snoozeReminder = async (reminderId: string, duration: SnoozeDuration): Promise<Reminder> => {
-    try {
-      return await apiClient.snoozeReminder(reminderId, duration);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to snooze reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const completeReminder = async (reminderId: string): Promise<Reminder> => {
-    try {
-      return await apiClient.completeReminder(reminderId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to complete reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const deleteReminder = async (reminderId: string): Promise<void> => {
-    try {
-      await apiClient.deleteReminder(reminderId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to delete reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const updateReminder = async (reminderId: string, payload: UpdateReminderPayload): Promise<Reminder> => {
-    try {
-      return await apiClient.updateReminder(reminderId, payload);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to update reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const getEmailQuota = async (): Promise<EmailQuotaResponse> => {
-    try {
-      return await apiClient.getEmailQuota();
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch email quota";
-      setError(message);
-      throw err;
-    }
-  };
-
-  // Analytics Methods
-  const getAnalytics = async (): Promise<UserAnalytics> => {
+  // ─── Analytics (delegates to useAnalyticsApi) ───
+  const getAnalytics = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await apiClient.getAnalytics();
-      return data;
+      return await analyticsApi.getAnalytics();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Failed to fetch analytics";
       setError(message);
@@ -802,157 +685,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // =========================================================================
-  // TODO Methods (Pro/Premium only)
-  // =========================================================================
-
-  const getTodos = async (filters?: { status?: TodoStatus; category?: TodoCategory; priority?: TodoPriority }): Promise<TodoListResponse> => {
-    try {
-      return await apiClient.getTodos(filters);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch todos";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const getTodo = async (todoId: string): Promise<TodoItem> => {
-    try {
-      return await apiClient.getTodo(todoId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to fetch todo";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const createTodo = async (payload: CreateTodoPayload): Promise<TodoItem> => {
-    try {
-      return await apiClient.createTodo(payload);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create todo";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const updateTodo = async (todoId: string, payload: UpdateTodoPayload): Promise<TodoItem> => {
-    try {
-      return await apiClient.updateTodo(todoId, payload);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to update todo";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const deleteTodo = async (todoId: string): Promise<void> => {
-    try {
-      await apiClient.deleteTodo(todoId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to delete todo";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const addSubtask = async (todoId: string, title: string): Promise<TodoSubtask> => {
-    try {
-      return await apiClient.addSubtask(todoId, title);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to add subtask";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const updateSubtask = async (todoId: string, subtaskId: string, data: Partial<TodoSubtask>): Promise<TodoSubtask> => {
-    try {
-      return await apiClient.updateSubtask(todoId, subtaskId, data);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to update subtask";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const deleteSubtask = async (todoId: string, subtaskId: string): Promise<void> => {
-    try {
-      await apiClient.deleteSubtask(todoId, subtaskId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to delete subtask";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const createTodoReminder = async (todoId: string, payload: CreateTodoReminderPayload): Promise<TodoReminder> => {
-    try {
-      return await apiClient.createTodoReminder(todoId, payload);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to create todo reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const updateTodoReminder = async (todoId: string, payload: Partial<CreateTodoReminderPayload>): Promise<TodoReminder> => {
-    try {
-      return await apiClient.updateTodoReminder(todoId, payload);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to update todo reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const deleteTodoReminder = async (todoId: string): Promise<void> => {
-    try {
-      await apiClient.deleteTodoReminder(todoId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to delete todo reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const snoozeTodoReminder = async (todoId: string, duration: SnoozeDuration): Promise<TodoReminder> => {
-    try {
-      return await apiClient.snoozeTodoReminder(todoId, duration);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to snooze todo reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const dismissTodoReminder = async (todoId: string): Promise<TodoReminder> => {
-    try {
-      return await apiClient.dismissTodoReminder(todoId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to dismiss todo reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const completeTodoReminder = async (todoId: string): Promise<TodoReminder> => {
-    try {
-      return await apiClient.completeTodoReminder(todoId);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to complete todo reminder";
-      setError(message);
-      throw err;
-    }
-  };
-
-  const getDueTodoReminders = async (): Promise<DueTodoRemindersResponse> => {
-    try {
-      return await apiClient.getDueTodoReminders();
-    } catch {
-      return { due_reminders: [], count: 0 };
-    }
-  };
+  // ─── Todos (delegates to useTodosApi) ───
+  const {
+    getTodos,
+    getTodo,
+    createTodo,
+    updateTodo,
+    deleteTodo,
+    addSubtask,
+    updateSubtask,
+    deleteSubtask,
+    createTodoReminder,
+    updateTodoReminder,
+    deleteTodoReminder,
+    snoozeTodoReminder,
+    dismissTodoReminder,
+    completeTodoReminder,
+    getDueTodoReminders,
+  } = todosApi;
 
   const logout = async () => {
     setIsLoading(true);

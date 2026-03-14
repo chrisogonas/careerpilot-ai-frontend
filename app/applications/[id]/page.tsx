@@ -572,7 +572,7 @@ function ApplicationDetailContent() {
           <div className="flex gap-2 items-start">
             <div className="flex flex-col items-center">
               <button
-                onClick={() => setShowEmailModal(true)}
+                onClick={() => { setEmailModalMode("apply"); setShowEmailModal(true); }}
                 className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg transition"
               >
                 Apply for this Job

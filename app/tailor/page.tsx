@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter, useSearchParams } from "next/navigation";
 import { apiClient } from "@/lib/utils/api";
 import { TailorResponse, Resume, CoverLetterResponse, StarStoryResponse } from "@/lib/types";
+import TemplateSelector from "@/app/components/TemplateSelector";
 
 interface SaveTailoredResponse {
   message: string;
@@ -74,6 +75,8 @@ function TailorResumeContent() {
   const [diffViewExpanded, setDiffViewExpanded] = useState(false);
   const [customizationText, setCustomizationText] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [templateSelectorOpen, setTemplateSelectorOpen] = useState(false);
+  const [selectedTemplate, setSelectedTemplate] = useState("classic");
   const [jobUrl, setJobUrl] = useState("");
   const [urlLoading, setUrlLoading] = useState(false);
   const [tailorHistory, setTailorHistory] = useState<Array<{ id: string; tailored_text: string; extracted_requirements?: string; role_title?: string; company_name?: string; created_at: string }>>([]);
@@ -1085,12 +1088,25 @@ function TailorResumeContent() {
                         </button>
 
                         <button
-                          onClick={async () => {
+                          onClick={() => setTemplateSelectorOpen(true)}
+                          disabled={pdfLoading}
+                          className="mt-3 w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition disabled:opacity-60"
+                        >
+                          {pdfLoading ? "Generating PDF..." : "Download as PDF"}
+                        </button>
+
+                        <TemplateSelector
+                          open={templateSelectorOpen}
+                          onClose={() => setTemplateSelectorOpen(false)}
+                          selectedTemplate={selectedTemplate}
+                          onSelect={async (templateId) => {
+                            setSelectedTemplate(templateId);
                             try {
                               setPdfLoading(true);
                               const blob = await apiClient.exportResumePDF({
                                 resume_text: getCleanResume(result.tailored_resume),
                                 title: targetRole || "Tailored Resume",
+                                template: templateId,
                               });
                               const url = URL.createObjectURL(blob);
                               const a = document.createElement("a");
@@ -1106,11 +1122,7 @@ function TailorResumeContent() {
                               setPdfLoading(false);
                             }
                           }}
-                          disabled={pdfLoading}
-                          className="mt-3 w-full bg-purple-600 hover:bg-purple-700 text-white py-2 rounded-lg font-medium transition disabled:opacity-60"
-                        >
-                          {pdfLoading ? "Generating PDF..." : "Download as PDF"}
-                        </button>
+                        />
                       </div>
                     )}
                   </div>

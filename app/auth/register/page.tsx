@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/context/AuthContext";
 
 export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -13,6 +21,8 @@ export default function RegisterPage() {
   const [error, setError] = useState("");
   const { register } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const referralCode = searchParams.get("ref") || undefined;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,7 +30,7 @@ export default function RegisterPage() {
     setLoading(true);
 
     try {
-      await register(email, password, fullName);
+      await register(email, password, fullName, referralCode);
       // After registration, redirect to resend-verification page for email verification
       router.push("/auth/resend-verification");
     } catch (err) {
@@ -41,6 +51,12 @@ export default function RegisterPage() {
             Create your account to get started
           </p>
         </div>
+
+        {referralCode && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded text-sm mb-2">
+            🎁 You&apos;ve been referred! Both you and your friend will earn <strong>50 bonus credits</strong> when you use your first feature.
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {error && (

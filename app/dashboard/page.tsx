@@ -7,13 +7,21 @@ import { useAuth } from "@/lib/context/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { apiClient } from "@/lib/utils/api";
-import { UsageResponse, EmailQuotaResponse } from "@/lib/types";
+import { UsageResponse, EmailQuotaResponse, ActivityItem } from "@/lib/types";
+import {
+  FileText, Search, PenTool, Star, Briefcase, Mic,
+  ArrowRight, AlertCircle, CreditCard, TrendingUp, Clock,
+} from "lucide-react";
+import type { ElementType } from "react";
+import { DashboardSkeleton } from "@/app/components/Skeleton";
+import ActivityTable from "@/app/components/ActivityTable";
 
 export default function DashboardPage() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const [usage, setUsage] = useState<UsageResponse | null>(null);
   const [emailQuota, setEmailQuota] = useState<EmailQuotaResponse | null>(null);
+  const [activityItems, setActivityItems] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -30,12 +38,14 @@ export default function DashboardPage() {
 
   const fetchUsage = async () => {
     try {
-      const [usageRes, emailRes] = await Promise.all([
+      const [usageRes, emailRes, activityRes] = await Promise.all([
         apiClient.getUsage(),
         apiClient.getEmailQuota(),
+        apiClient.getRecentActivity(50).catch(() => ({ items: [], total: 0 })),
       ]);
       setUsage(usageRes);
       setEmailQuota(emailRes);
+      setActivityItems(activityRes.items);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Failed to load usage data"
@@ -61,14 +71,7 @@ export default function DashboardPage() {
   };
 
   if (authLoading || loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading your dashboard...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   if (!isAuthenticated) {
@@ -184,18 +187,14 @@ export default function DashboardPage() {
               )}
             </div>
 
-            {/* Upgrade CTA */}
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
-              <h2 className="text-sm font-medium mb-2 opacity-90">
-                Upgrade Your Plan
-              </h2>
-              <p className="text-sm opacity-75 mb-4">
-                Get more features and credits
-              </p>
-              <button onClick={() => router.push("/subscribe")} className="w-full bg-white text-blue-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
-                View Plans
-              </button>
-            </div>
+            {/* Smart Upgrade CTA */}
+            <UpgradeCTA
+              plan={usage.plan}
+              creditsRemaining={usage.credits_remaining}
+              inGracePeriod={usage.in_grace_period}
+              gracePeriodDaysRemaining={usage.grace_period_days_remaining}
+              onNavigate={(path) => router.push(path)}
+            />
           </div>
         )}
 
@@ -239,37 +238,22 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Quick Actions */}
-        <div className="mt-8 bg-white rounded-lg shadow p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Quick Actions
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <ActionCard
-              title="Tailor Resume"
-              description="Optimize your resume for a job description"
-              href="/tailor"
-              icon="📄"
-            />
-            <ActionCard
-              title="Analyze Job"
-              description="Extract requirements from job descriptions"
-              href="/analyze-job"
-              icon="🔍"
-            />
-            <ActionCard
-              title="Generate Cover Letter"
-              description="Create personalized cover letters"
-              href="/cover-letter"
-              icon="✍️"
-            />
-            <ActionCard
-              title="STAR Stories"
-              description="Generate interview preparation stories"
-              href="/star-stories"
-              icon="⭐"
-            />
+        {/* Suggested Next Steps — full width */}
+        {usage && (
+          <div className="bg-white rounded-lg shadow p-6 mb-8">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Suggested Next Steps
+            </h2>
+            <SmartSuggestions usage={usage} />
           </div>
+        )}
+
+        {/* Recent Activity — full width */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">
+            Recent Activity
+          </h2>
+          <ActivityTable items={activityItems} />
         </div>
       </div>
     </div>
@@ -308,21 +292,232 @@ function ActionCard({
   title,
   description,
   href,
-  icon,
+  icon: Icon,
 }: {
   title: string;
   description: string;
   href: string;
-  icon: string;
+  icon: ElementType;
 }) {
   return (
     <Link
       href={href}
-      className="p-4 border border-gray-200 rounded-lg hover:shadow-lg hover:border-blue-300 transition"
+      className="flex items-start gap-3 p-4 border border-gray-200 rounded-lg hover:shadow-md hover:border-blue-300 transition"
     >
-      <div className="text-3xl mb-2">{icon}</div>
-      <h3 className="font-semibold text-gray-900">{title}</h3>
-      <p className="text-sm text-gray-600 mt-1">{description}</p>
+      <div className="flex-shrink-0 text-blue-600">
+        <Icon className="w-6 h-6" />
+      </div>
+      <div>
+        <h3 className="font-semibold text-gray-900 text-sm">{title}</h3>
+        <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+      </div>
+      <ArrowRight className="w-4 h-4 text-gray-400 ml-auto flex-shrink-0 mt-0.5" />
     </Link>
   );
+}
+
+function SmartSuggestions({ usage }: { usage: UsageResponse }) {
+  const u = usage.usage_this_month;
+
+  const hasResumeTailors = (u.resume_tailors?.count ?? 0) > 0;
+  const hasCoverLetters = (u.cover_letters?.count ?? 0) > 0;
+  const hasJobAnalyses = (u.job_analyses?.count ?? 0) > 0;
+  const hasStarStories = (u.star_stories?.count ?? 0) > 0;
+
+  // Priority-scored suggestions — higher = more relevant to the user right now
+  const scored: { title: string; description: string; href: string; icon: ElementType; priority: number }[] = [];
+
+  // Urgent: low credits always surfaces
+  if (usage.credits_remaining < 10 && usage.plan !== "premium") {
+    scored.push({
+      title: "Running low on credits",
+      description: `Only ${usage.credits_remaining} credits left — upgrade or buy a pack`,
+      href: "/subscribe",
+      icon: AlertCircle,
+      priority: 100,
+    });
+  }
+
+  // --- Workflow-stage scoring ---
+  // Brand-new user: guide them into the funnel
+  if (!hasJobAnalyses && !hasResumeTailors) {
+    scored.push({
+      title: "Analyze a job description",
+      description: "Paste a job listing to extract key requirements",
+      href: "/analyze-job",
+      icon: Search,
+      priority: 90,
+    });
+  }
+
+  if (!hasResumeTailors) {
+    // Highest non-urgent action for users who haven't tailored yet
+    scored.push({
+      title: "Tailor your resume",
+      description: "Optimize your resume for a specific job description",
+      href: "/tailor",
+      icon: FileText,
+      priority: hasJobAnalyses ? 85 : 80, // boost if they already analyzed a job
+    });
+  }
+
+  // Natural next step after tailoring a resume
+  if (hasResumeTailors && !hasCoverLetters) {
+    scored.push({
+      title: "Generate a cover letter",
+      description: "Complete your application with a matching cover letter",
+      href: "/cover-letter",
+      icon: PenTool,
+      priority: 75,
+    });
+  }
+
+  // Interview prep — higher priority once they have materials ready
+  if (!hasStarStories) {
+    scored.push({
+      title: "Prepare STAR stories",
+      description: "Generate behavioral interview stories from your experience",
+      href: "/star-stories",
+      icon: Star,
+      priority: hasResumeTailors ? 70 : 50,
+    });
+  }
+
+  // Application tracking — only relevant once they've done real prep
+  if (hasResumeTailors && hasJobAnalyses) {
+    scored.push({
+      title: "Track an application",
+      description: "Keep your job applications organized in one place",
+      href: "/applications/new",
+      icon: Briefcase,
+      priority: 65,
+    });
+  }
+
+  // Mock interview — meaningful once resume work is done
+  if (hasResumeTailors) {
+    scored.push({
+      title: "Practice a mock interview",
+      description: "Get AI feedback on your interview responses",
+      href: "/mock-interview",
+      icon: Mic,
+      priority: hasStarStories ? 60 : 45, // boost if they already have STAR stories
+    });
+  }
+
+  // Job search — always available, moderate priority
+  scored.push({
+    title: "Search for jobs",
+    description: "Browse openings across major job boards",
+    href: "/jobs/search",
+    icon: Search,
+    priority: hasResumeTailors ? 40 : 55, // higher for new users who need leads
+  });
+
+  // Sort by priority descending and pick top 3
+  scored.sort((a, b) => b.priority - a.priority);
+  const displayed = scored.slice(0, 3);
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {displayed.map((s) => (
+        <ActionCard key={s.href} {...s} />
+      ))}
+    </div>
+  );
+}
+
+function UpgradeCTA({
+  plan,
+  creditsRemaining,
+  inGracePeriod,
+  gracePeriodDaysRemaining,
+  onNavigate,
+}: {
+  plan: string;
+  creditsRemaining: number;
+  inGracePeriod: boolean;
+  gracePeriodDaysRemaining: number | null;
+  onNavigate: (path: string) => void;
+}) {
+  // Grace period — urgent renewal
+  if (inGracePeriod) {
+    const daysLeft = gracePeriodDaysRemaining ?? 0;
+    return (
+      <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-lg shadow p-6 text-white">
+        <div className="flex items-center gap-2 mb-2">
+          <Clock className="w-4 h-4 opacity-90" />
+          <h2 className="text-sm font-medium opacity-90">Subscription Expired</h2>
+        </div>
+        <p className="text-sm opacity-80 mb-1">
+          {daysLeft > 0 ? `${daysLeft} day${daysLeft !== 1 ? "s" : ""} left in grace period` : "Grace period ending soon"}
+        </p>
+        <p className="text-xs opacity-65 mb-4">Renew now to keep your Pro/Premium features</p>
+        <button onClick={() => onNavigate("/subscribe")} className="w-full bg-white text-red-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
+          Renew Now
+        </button>
+      </div>
+    );
+  }
+
+  // Free → Pro
+  if (plan === "free") {
+    return (
+      <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg shadow p-6 text-white">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="w-4 h-4 opacity-90" />
+          <h2 className="text-sm font-medium opacity-90">Upgrade to Pro</h2>
+        </div>
+        <ul className="text-sm opacity-80 space-y-1 mb-4">
+          <li>200 credits/month</li>
+          <li>Email reminders</li>
+          <li>Mock interviews</li>
+        </ul>
+        <button onClick={() => onNavigate("/subscribe")} className="w-full bg-white text-blue-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
+          View Plans
+        </button>
+      </div>
+    );
+  }
+
+  // Pro → Premium
+  if (plan === "pro") {
+    return (
+      <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-lg shadow p-6 text-white">
+        <div className="flex items-center gap-2 mb-2">
+          <TrendingUp className="w-4 h-4 opacity-90" />
+          <h2 className="text-sm font-medium opacity-90">Upgrade to Premium</h2>
+        </div>
+        <ul className="text-sm opacity-80 space-y-1 mb-4">
+          <li>Unlimited credits</li>
+          <li>Priority AI processing</li>
+          <li>Advanced analytics</li>
+        </ul>
+        <button onClick={() => onNavigate("/subscribe")} className="w-full bg-white text-amber-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
+          View Plans
+        </button>
+      </div>
+    );
+  }
+
+  // Premium with low credits → buy credit pack
+  if (plan === "premium" && creditsRemaining < 20) {
+    return (
+      <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg shadow p-6 text-white">
+        <div className="flex items-center gap-2 mb-2">
+          <CreditCard className="w-4 h-4 opacity-90" />
+          <h2 className="text-sm font-medium opacity-90">Need More Credits?</h2>
+        </div>
+        <p className="text-sm opacity-80 mb-4">
+          {creditsRemaining} credits remaining — top up with a credit pack
+        </p>
+        <button onClick={() => onNavigate("/subscribe")} className="w-full bg-white text-purple-600 py-2 rounded-lg font-medium hover:bg-gray-100 transition">
+          Buy Credits
+        </button>
+      </div>
+    );
+  }
+
+  // Premium with plenty of credits — nothing to show
+  return null;
 }
